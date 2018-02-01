@@ -38,6 +38,8 @@ double distance(double x1, double y1, double x2, double y2)
 {
 	return sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
 }
+
+
 int ClosestWaypoint(double x, double y, const vector<double> &maps_x, const vector<double> &maps_y)
 {
 
@@ -244,6 +246,14 @@ int main() {
 
 
           	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+
+            double dist_inc = 0.5;
+            for(int i = 0; i < 50; i++)
+            {
+              next_x_vals.push_back(car_x + (dist_inc * i) * cos(deg2rad(car_yaw)));
+              next_y_vals.push_back(car_y + (dist_inc * i) * sin(deg2rad(car_yaw)));
+            }
+
           	msgJson["next_x"] = next_x_vals;
           	msgJson["next_y"] = next_y_vals;
 
