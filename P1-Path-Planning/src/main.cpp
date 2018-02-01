@@ -284,9 +284,11 @@ int main() {
             vector<double> xy = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
             next_x_vals.push_back(xy[0]);
-            next_x_vals.push_back(xy[1]);
+            next_y_vals.push_back(xy[1]);
+
           }
 
+          
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
