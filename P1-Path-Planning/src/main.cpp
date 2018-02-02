@@ -194,9 +194,9 @@ int main() {
   int lane = 1;
 
   // a refence velocity to target
-  double ref_vel = 49.5;  // mph
+  auto ref_vel = 49.5;  // mph
 
-  h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  h.onMessage([&ref_vel, &map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &lane](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
   uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -235,10 +235,12 @@ int main() {
 
 
 
+          json msgJson;
+
+          //create the points that the car will be following and path planner will be using
           //define the actual (x,y) points we will use for the planne
           vector<double> next_x_vals;
           vector<double> next_y_vals;
-
 
           // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
 #if 0
@@ -299,8 +301,13 @@ int main() {
           }
 #endif
 
-
+//#if 0
           int prev_size = previous_path_x.size();
+          cout << "previous x size: " << previous_path_x.size() <<endl;
+          cout << "previous y size: " << previous_path_y.size() <<endl;
+
+          cout << " -------------------------- " << endl;
+
 
           // create a list of widely spaced (x,y) waypoints, evenly spaced at 30m
           // later we will interpolate these waypoints with a spline and fill it in with more points that control speed
@@ -335,7 +342,8 @@ int main() {
 
             double ref_x_prev = previous_path_x[prev_size -2];
             double ref_y_prev = previous_path_y[prev_size -2];
-            ref_yaw = atan2(ref_y - ref_y_prev, ref_x - ref_x_prev);
+
+            ref_yaw = atan2((ref_y - ref_y_prev), (ref_x - ref_x_prev));
 
             //use 2 points that make the path tangent to the previous path's end point
             ptsx.push_back(ref_x_prev);
@@ -346,11 +354,25 @@ int main() {
 
           }
 
+          for (auto x : ptsx)
+          std::cout << "origin x in ptsx is " << setw(4) << x << endl;
+          std::cout << std::endl;
+          
+          for (auto y : ptsy)
+          std::cout << "origin y in ptsy is " << setw(4) << y << endl;
+          std::cout << std::endl;
+          
+          cout << " origin ptsx SIZE " << ptsx.size() << endl;
+          cout << " origin ptsy SIZE " << ptsy.size() << endl;
+          cout << " -------------------------- " << endl;
 
+
+          // Create three more points. one is 30 the other is 60 and the final is 90 meters away from the car's location
+          //until now the list has only 3 values
           // in Frenet add evently 30m spaced points ahead of the starting reference
-          vector<double> next_wp0 = getXY( car_s + 30, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
-          vector<double> next_wp1 = getXY( car_s + 60, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
-          vector<double> next_wp2 = getXY( car_s + 90,  2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
+          vector<double> next_wp0 = getXY( (car_s + 30), (2 + 4 * 1), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
+          vector<double> next_wp1 = getXY( (car_s + 60), (2 + 4 * 1), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
+          vector<double> next_wp2 = getXY( (car_s + 90), (2 + 4 * 1), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
 
           ptsx.push_back(next_wp0[0]);
           ptsx.push_back(next_wp1[0]);
@@ -362,9 +384,25 @@ int main() {
           ptsy.push_back(next_wp2[1]);
 
 
+          for (auto x : ptsx)
+          std::cout << " total 5 origin x in ptsx is " << setw(4) << x << endl;
+          std::cout << std::endl;
+          
+          for (auto y : ptsy)
+          std::cout << " total 5 origin y in ptsy is " << setw(4) << y << endl;
+          std::cout << std::endl;
+          
+          cout << " origin ptsx SIZE " << ptsx.size() << endl;
+          cout << " origin ptsy SIZE " << ptsy.size() << endl;
+          cout << " ---------------------------------- " << endl;
+
+          //until here the pts has five points, the car location, one previous location and 30,60 and 90 locations
+
           for(int i=0; i < ptsx.size(); i++)
           {
-
+            
+            //Here we need to transform the locations into local coordinates. That means the start point will be at 0,0
+            // and the angle will be at 0. Because in the car's perspective the car is heading straight
             //shift car reference angle to 0 degree
             double shift_x = ptsx[i] - ref_x;
             double shift_y = ptsy[i] - ref_y;
@@ -373,36 +411,61 @@ int main() {
             ptsy[i] = ( shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw) );
           }
 
+          cout << " ----------- transform to car's local coordinates ------------------ " << endl;
+          for (auto x : ptsx)
+          std::cout << " total 5 origin x in ptsx is " << setw(4) << x << endl;
+          std::cout << std::endl;
+          
+          for (auto y : ptsy)
+          std::cout << " total 5 origin y in ptsy is " << setw(4) << y << endl;
+          std::cout << std::endl;
+          
+          cout << " origin ptsx SIZE " << ptsx.size() << endl;
+          cout << " origin ptsy SIZE " << ptsy.size() << endl;
+          cout << " ---------------------------------------------------- " << endl;
 
-          // create a spline
+
+          //Create the spline which represents the polynomial that will go through all points
           tk::spline s;
 
           // set (x,y) points to the spline
           s.set_points(ptsx, ptsy);
 
+
+          
+          cout<<" previous x size: " <<previous_path_x.size()<<endl;
+
           // start with all of the previous path points from last time
           for(int i =0; i < previous_path_x.size(); i++)
           {
+            //Add the points of the previous path to the next path planner
+            // this helps adding part of the previous path to the next one. This would end up making the path smoother.
             next_x_vals.push_back(previous_path_x[i]);
             next_y_vals.push_back(previous_path_y[i]);
           }
 
-
+          //So here we find the y value of the x value we have and we find the target distance to the x point (30)
           // calculate how to break up sline points so that we travel at out desired reference velocity
           double target_x = 30.0;
           double target_y = s(target_x);
-          double target_dist = sqrt( (target_x * target_x) + (target_y * target_y) );
+          double target_dist = sqrt( (target_x) * (target_x) + (target_y) * (target_y) );
 
           double x_add_on = 0;
 
 
           //fill up the rest of our path planner after filling it with previous points, here we will always output 50 points
-          for( int i =1; 1 <= 50 - previous_path_x.size(): i++)
+          for( int i =1; i <= 50 - previous_path_x.size(); i++)
           {
-            double N = (target_dist /(.02 * ref_vel / 2.24));
+
+            //now start adding the points that are required to remain the desired speed
+            double N = (target_dist/(0.02*49.5/2.24));
             double x_point = x_add_on + (target_x)/N;
             double y_point = s(x_point);
 
+            cout << " in car's coordinate: x_point = " << x_point << endl;
+            cout << " in car's coordinate: y_point = " << y_point << endl;
+
+            //set a new checkpoint
             x_add_on = x_point;
 
             double x_ref = x_point;
@@ -415,15 +478,28 @@ int main() {
             x_point += ref_x;
             y_point += ref_y;
 
+            cout << " globle x_point = " << x_point << endl;
+            cout << " global y_point = " << y_point << endl;
+
             next_x_vals.push_back(x_point);
             next_y_vals.push_back(y_point);
 
           }
+//#endif
+
+          for (auto x : next_x_vals)
+          std::cout << "next x value is " << setw(4) << x << endl;
+          std::cout << std::endl;
+          
+          for (auto y : next_y_vals)
+          std::cout << "next y value is " << setw(4) << y << endl;
+          std::cout << std::endl;
+          
+          cout << " next x SIZE " << next_x_vals.size() << endl;
+          cout << " next y SIZE " << next_y_vals.size() << endl;
 
 
 
-
-          json msgJson;
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
 
