@@ -191,7 +191,7 @@ int main() {
   }
 
   //start in lane 1:
-  int lane = 1;
+  int lane = 2;
 
   // a refence velocity to target
   auto ref_vel = 49.5;  // mph
@@ -233,8 +233,69 @@ int main() {
           // Sensor Fusion Data, a list of all other cars on the same side of the road.
           auto sensor_fusion = j[1]["sensor_fusion"];
 
+          int prev_size = previous_path_x.size();
+          cout << "previous x size: " << previous_path_x.size() <<endl;
+          cout << "previous y size: " << previous_path_y.size() <<endl;
+
+          cout << " -------------------------- " << endl;
 
 
+          /******************sensor fusion********************************/
+
+          if (prev_size > 0)
+          {
+            car_s = end_path_s;
+          }
+
+          bool too_close = false;
+
+          cout << " ------sensor fusion------------ " << endl;
+          cout << "sensor_fusion.size(): " << sensor_fusion.size() <<endl;
+
+          cout << " -------------------------- " << endl;
+
+          //find ref_v to use
+          for( int n =0; n < sensor_fusion.size(); n++)
+          {
+            //car is in my lane
+            float d = sensor_fusion[n][6];
+
+            cout << "d= " << d <<endl;
+
+            if ( d < (2 + 4 * lane + 2) && d > (2 + 4 * lane - 2) )
+            {
+
+              cout << " ------ there is car in my lane !--------------- " << endl;
+
+              double vx = sensor_fusion[n][3];
+              double vy = sensor_fusion[n][4];
+
+              double check_speed = sqrt(vx * vx + vy * vy);
+              double check_car_s = sensor_fusion[n][5];
+
+              //if using previous points can project s value out
+              check_car_s += ( ((double)prev_size) * 0.02 * check_speed);
+
+              // check s values greater than mine and s gap
+              if ((check_car_s > car_s) && ((check_car_s - car_s) < 30))
+              {
+                // DO some logic here, lower reference velocity so we dont crash into the car ahead of us, could 
+                // also flag to try to change lanes
+                ref_vel = 29.5;
+                // too_close = true;
+
+                cout << " ------detect collision !------------ " << endl;
+                cout << "ref_vel reduce to: " << ref_vel <<endl;
+
+                cout << " -------------------------- " << endl;
+
+              } 
+            }
+          }
+
+
+
+          /******************path planning********************************/
           json msgJson;
 
           //create the points that the car will be following and path planner will be using
@@ -302,11 +363,6 @@ int main() {
 #endif
 
 //#if 0
-          int prev_size = previous_path_x.size();
-          cout << "previous x size: " << previous_path_x.size() <<endl;
-          cout << "previous y size: " << previous_path_y.size() <<endl;
-
-          cout << " -------------------------- " << endl;
 
 
           // create a list of widely spaced (x,y) waypoints, evenly spaced at 30m
@@ -370,9 +426,9 @@ int main() {
           // Create three more points. one is 30 the other is 60 and the final is 90 meters away from the car's location
           //until now the list has only 3 values
           // in Frenet add evently 30m spaced points ahead of the starting reference
-          vector<double> next_wp0 = getXY( (car_s + 30), (2 + 4 * 1), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
-          vector<double> next_wp1 = getXY( (car_s + 60), (2 + 4 * 1), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
-          vector<double> next_wp2 = getXY( (car_s + 90), (2 + 4 * 1), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
+          vector<double> next_wp0 = getXY( (car_s + 30), (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
+          vector<double> next_wp1 = getXY( (car_s + 60), (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
+          vector<double> next_wp2 = getXY( (car_s + 90), (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
 
           ptsx.push_back(next_wp0[0]);
           ptsx.push_back(next_wp1[0]);
@@ -458,7 +514,7 @@ int main() {
           {
 
             //now start adding the points that are required to remain the desired speed
-            double N = (target_dist/(0.02*49.5/2.24));
+            double N = (target_dist/(0.02 * ref_vel/2.24));
             double x_point = x_add_on + (target_x)/N;
             double y_point = s(x_point);
 
