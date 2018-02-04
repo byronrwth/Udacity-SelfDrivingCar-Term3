@@ -194,7 +194,8 @@ int main() {
   int lane = 2;
 
   // a refence velocity to target
-  auto ref_vel = 49.5;  // mph
+  // auto ref_vel = 0 ;
+  double ref_vel = 0; //49.5;  // mph
 
   h.onMessage([&ref_vel, &map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &lane](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
   uWS::OpCode opCode) {
@@ -281,11 +282,11 @@ int main() {
               {
                 // DO some logic here, lower reference velocity so we dont crash into the car ahead of us, could 
                 // also flag to try to change lanes
-                ref_vel = 29.5;
-                // too_close = true;
+                //ref_vel = 29.5;
+                 too_close = true;
 
                 cout << " ------detect collision !------------ " << endl;
-                cout << "ref_vel reduce to: " << ref_vel <<endl;
+                //out << "ref_vel reduce to: " << ref_vel <<endl;
 
                 cout << " -------------------------- " << endl;
 
@@ -293,7 +294,18 @@ int main() {
             }
           }
 
-
+          if (too_close)
+          {
+            ref_vel -= 0.224 ;
+            cout << " ------ reduce velocity 0.224 per second tobe: " << ref_vel << endl;
+          }
+          else if ( ref_vel < 49.5)
+          {
+            cout << " ------ velocity too slow: " << ref_vel << endl;
+            ref_vel += 0.224 ;
+            //ref_vel += 1 ; //0.224 ;
+            cout << " ------ increase velocity 0.224 per second tobe: " << ref_vel << endl;
+          }
 
           /******************path planning********************************/
           json msgJson;
@@ -513,6 +525,7 @@ int main() {
           for( int i =1; i <= 50 - previous_path_x.size(); i++)
           {
 
+            cout << " ref_vel = " << ref_vel << endl;
             //now start adding the points that are required to remain the desired speed
             double N = (target_dist/(0.02 * ref_vel/2.24));
             double x_point = x_add_on + (target_x)/N;
