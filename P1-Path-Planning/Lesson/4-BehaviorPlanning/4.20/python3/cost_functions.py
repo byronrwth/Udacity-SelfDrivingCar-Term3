@@ -7,6 +7,12 @@ TrajectoryData = namedtuple("TrajectoryData", [
     'end_distance_to_goal',
     ])
 
+"""
+Here we have provided two possible suggestions for cost functions, but feel free to use your own!
+The weighted cost over all cost functions is computed in calculate_cost. See get_helper_data
+for details on how useful helper data is computed.
+"""
+
 #weights for costs
 REACH_GOAL = 10 ** 6
 EFFICIENCY = 10 ** 5
@@ -19,11 +25,13 @@ def goal_distance_cost(vehicle, trajectory, predictions, data):
     Cost increases based on distance of intended lane (for planning a lane change) and final lane of trajectory.
     Cost of being out of goal lane also becomes larger as vehicle approaches goal distance.
     """
+    print("-----------goal_distance_cost-----------------------")
     distance = abs(data.end_distance_to_goal)
     if distance:
         cost = 1 - 2*exp(-(abs(2.0*vehicle.goal_lane - data.intended_lane - data.final_lane) / distance))
     else:
         cost = 1
+    print("goal_distance_cost: ", cost)
     return cost
 
 
@@ -31,12 +39,12 @@ def inefficiency_cost(vehicle, trajectory, predictions, data):
     """
     Cost becomes higher for trajectories with intended lane and final lane that have slower traffic. 
     """
-
+    print("-----------inefficiency_cost-----------------------")
     proposed_speed_intended = velocity(predictions, data.intended_lane) or vehicle.target_speed
     proposed_speed_final = velocity(predictions, data.final_lane) or vehicle.target_speed
     
     cost = float(2.0*vehicle.target_speed - proposed_speed_intended - proposed_speed_final)/vehicle.target_speed
-
+    print("inefficiency_cost: ", cost)
     return cost
 
 
@@ -44,13 +52,17 @@ def calculate_cost(vehicle, trajectory, predictions, verbose=False):
     """
     Sum weighted cost functions to get total cost for trajectory.
     """
+    print("---------------calculate_cost-------------------------------")
     trajectory_data = get_helper_data(vehicle, trajectory, predictions)
     #print(trajectory_data)
     cost = 0.0
     cf_list = [goal_distance_cost, inefficiency_cost]
+    print("cf_list: ", cf_list)
     weight_list = [REACH_GOAL, EFFICIENCY]
+    print("weight_list: ", weight_list)
 
     for weight, cf in zip(weight_list, cf_list):
+        print("weight: ", weight, " ,cf= ", cf)
         new_cost = weight*cf(vehicle, trajectory, predictions, trajectory_data)
         if DEBUG or verbose:
             print ("{} has cost {} for lane {}".format(cf.__name__, new_cost, trajectory[-1].lane))

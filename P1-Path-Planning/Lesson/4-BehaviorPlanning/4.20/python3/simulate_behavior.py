@@ -8,21 +8,24 @@ import random
 SPEED_LIMIT = 10 
 
 # all traffic in lane (besides ego) follow these speeds
-LANE_SPEEDS = [6,7,8,9] 
+#LANE_SPEEDS = [6,7,8,9] 
+LANE_SPEEDS = [6,7,8]
 
 # Number of available "cells" which should have traffic
-TRAFFIC_DENSITY = 0.15
+TRAFFIC_DENSITY = 0.01 #0.15
 
 # At each timestep, ego can set acceleration to value between 
 # -MAX_ACCEL and MAX_ACCEL
 MAX_ACCEL = 2
 
 # s value and lane number of goal.
-GOAL = (300, 0)
+#GOAL = (300, 0)
+GOAL = (20, 1) # target car show in road as -G-
 
 # These affect the visualization
-FRAMES_PER_SECOND = 4
-AMOUNT_OF_ROAD_VISIBLE = 40
+# each second will draw a new pic of road, frames cannot change No. pics to be drawn, but how fast it to be drawn, e.g. may take 10s to draw 1 pic of road, which has 1s update
+FRAMES_PER_SECOND = 4 #0.1 #10 #4
+AMOUNT_OF_ROAD_VISIBLE = 25 #40 # how long the road will be dsiplayed
 
 def run_simulation(VISUALIZE=True):
     road = Road(SPEED_LIMIT, TRAFFIC_DENSITY, LANE_SPEEDS, AMOUNT_OF_ROAD_VISIBLE)

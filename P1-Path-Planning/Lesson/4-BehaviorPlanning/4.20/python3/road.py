@@ -38,15 +38,30 @@ class Road(object):
     def advance(self):
         predictions = {}
         # Generate predictions
+        print("--------road.advance()------------")
+        
+        print("ego id: ", self.ego_key)
+
         for v_id, v in self.vehicles.items():
             if v_id != self.ego_key:
+                print("car not ego: ", v_id)
                 preds = v.generate_predictions()
+                #print("preds: ", preds) #[<vehicle.Vehicle object at 0x0000000002CA5C50>, <vehicle.Vehicle object at 0x0000000002CA5B38>]
                 predictions[v_id] = preds
+
+        # debug to see predictions
+        #for car_id in predictions:
+        #    print("car in predictions= ", car_id) # e.g. 1, non-ego cars
 
         # Choose next state based on predictions and
         # update kinematics/state for all vehicles.
         for v_id, v in self.vehicles.items():
             if v_id == self.ego_key:
+                # debug
+                print(" ego car id is: ", v_id)
+                for car_id in predictions:
+                    print("car in predictions= ", car_id) # e.g. 1, non-ego cars
+
                 trajectory = v.choose_next_state(predictions)
                 v.realize_next_state(trajectory)
             else:

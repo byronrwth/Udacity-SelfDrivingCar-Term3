@@ -30,9 +30,28 @@ class Vehicle(object):
             vehicle trajectories as values. Trajectories are a list of Vehicle objects representing
             the vehicle at the current timestep and one timestep in the future.
         OUTPUT: The the best (lowest cost) trajectory corresponding to the next ego vehicle state.
-        """
 
+        Functions that will be useful:
+        1. successor_states():
+            Returns a vector of possible successor states for the finite state machine.
+
+        2. generate_trajectory(self, state, predictions):
+            Returns a vector of Vehicle objects representing a vehicle trajectory, given a state and predictions. 
+            Note that trajectories might be empty if no possible trajectory exists for the state; for example, 
+            if the state is LCR, but a vehicle is occupying the space to the ego vehicle's right, then there is 
+            no possible trajectory without first transitioning to another state.
+
+        3. calculate_cost(vehicle, trajectory, predictions):
+            Included from cost.cpp, computes the cost for a trajectory.
+        """
+        #debug
+        print( "----------------choose_next_state-----------------------")
+
+        print( "successor_states: ")
         states = self.successor_states()
+        for onestate in states:
+            print(onestate)
+
         costs = []
         for state in states:
             trajectory = self.generate_trajectory(state, predictions)
@@ -71,10 +90,23 @@ class Vehicle(object):
         """
         Given a possible next state, generate a trajectory to realize the next state.
         """
+        print( "----------------generate_trajectory-----------------------")
         if   state == "CS"  : trajectory = self.constant_speed_trajectory()
         elif state == "KL"  : trajectory = self.keep_lane_trajectory(predictions)
         elif state in ("LCL", "LCR") : trajectory = self.lane_change_trajectory(predictions, state)
         elif state in ("PLCL", "PLCR"): trajectory = self.prep_lane_change_trajectory(predictions, state)
+
+        # debug
+        print( "if potential state= ", state, " , genereate trajectory: ")
+        #trajectory = [Vehicle(self.lane, self.s, self.v, self.a, self.state), 
+        #print( "trajectory= ", trajectory)
+        for object in trajectory:
+            print( "object.lane= ", object.lane, " object.s= ", object.s, " object.v= ", object.v, " object.a= ", object.a, " object.state= ", object.state, )
+        """
+        state=  KL
+        trajectory=  [<vehicle.Vehicle object at 0x0000000002CD69B0>, <vehicle.Vehicle object at 0x0000000002CD6A20>]
+        """
+
         return trajectory
 
 
@@ -107,31 +139,54 @@ class Vehicle(object):
 
 
     def constant_speed_trajectory(self):
+        print("-----------constant_speed_trajectory-----------------")
         trajectory = [Vehicle(self.lane, self.s, self.v, self.a, self.state), 
                       Vehicle(self.lane, self.position_at(1), self.v, 0, self.state)]
         return trajectory
 
     def keep_lane_trajectory(self, predictions):
+        print("-----------keep_lane_trajectory-----------------")
         trajectory = [Vehicle(self.lane, self.s, self.v, self.a, self.state)]
         s, v, a = self.get_kinematics(predictions, self.lane)
         trajectory.append(Vehicle(self.lane, s, v, a, "KL"))
         return trajectory
 
     def prep_lane_change_trajectory(self, predictions, state):
+        print("-----------prep_lane_change_trajectory-----------------")
+        
+        print("predictions: ")
+        for pred_id in predictions:
+            print(pred_id)
+
+        print("state= ",state)
+        
+
         new_lane = self.lane + lane_direction[state]
+
+        print("initialize trajectory: ")
         trajectory = [Vehicle(self.lane, self.s, self.v, self.a, self.state)]
+        for tra in trajectory:
+            print("lane= ", tra.lane, " ,s= ", tra.s, " ,v= ", tra.v, " ,a= ",tra.a, " ,state= ",tra.state )
 
         curr_lane_new_kinematics = self.get_kinematics(predictions, self.lane)
         if self.get_vehicle_behind(predictions, self.lane):
+            print("there is car behind, still on my current lane= ", self.lane)
             s, v, a = curr_lane_new_kinematics #keep speed of current lane so as not to collide with car behind
         else: 
+            print("no car behind, got to new lane= ", new_lane, " , self.lane= ", self.lane)
             next_lane_new_kinematics = self.get_kinematics(predictions, new_lane)
             s, v, a = min([next_lane_new_kinematics, curr_lane_new_kinematics], key=lambda x: x[1]) #choose kinematics with lowest velocity
 
         trajectory.append(Vehicle(self.lane, s, v, a, state))
+        
+        print("update trajectory: ")
+        for tra in trajectory:
+            print("lane= ", tra.lane, " ,s= ", tra.s, " ,v= ", tra.v, " ,a= ",tra.a, " ,state= ",tra.state )
+
         return trajectory
 
     def lane_change_trajectory(self, predictions, state):
+        print("-----------lane_change_trajectory-----------------")
         #check to make sure the space is free
         new_lane = self.lane + lane_direction[state]
         for vehicle_id, prediction in predictions.items():
@@ -171,6 +226,7 @@ class Vehicle(object):
         Generates predictions for non-ego vehicles to be used
         in trajectory generation for ego vehicle.
         """
+        print("--------------generate_predictions--------------------")
         predictions = []
         for i in range(horizon):
             s = self.position_at(i)
@@ -178,6 +234,7 @@ class Vehicle(object):
             if(i < horizon-1):
                 v = self.position_at(i+1) - s
             predictions.append(Vehicle(self.lane, s, v, 0))
+            print("generate_predictions: ", self.lane, s, v, 0)
         return predictions
 
     def realize_next_state(self, trajectory):
