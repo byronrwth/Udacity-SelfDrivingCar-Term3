@@ -31,7 +31,8 @@ vector<Vehicle> Vehicle::choose_next_state(map<int, vector<Vehicle>> predictions
     /*
     
     ***Here you can implement the transition_function code from the Behavior Planning Pseudocode
-    classroom concept.***
+    classroom concept.*** Your goal will be to return the best (lowest cost) trajectory corresponding
+    to the next state.
     
     INPUT: A predictions map. This is a map using vehicle id as keys with predicted
         vehicle trajectories as values. A trajectory is a vector of Vehicle objects. The first
@@ -49,7 +50,6 @@ vector<Vehicle> Vehicle::choose_next_state(map<int, vector<Vehicle>> predictions
        cost.cpp, computes the cost for a trajectory.
     */
     
-    //TODO: Your solution here.
     vector<string> states = successor_states();
     float cost;
     vector<float> costs;
@@ -68,9 +68,6 @@ vector<Vehicle> Vehicle::choose_next_state(map<int, vector<Vehicle>> predictions
     vector<float>::iterator best_cost = min_element(begin(costs), end(costs));
     int best_idx = distance(begin(costs), best_cost);
     return final_trajectories[best_idx];
-
-    //TODO: Change return value here:
-    //return generate_trajectory("KL", predictions);
 }
 
 vector<string> Vehicle::successor_states() {
