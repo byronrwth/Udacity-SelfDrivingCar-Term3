@@ -59,6 +59,7 @@ class Road(object):
             if v_id == self.ego_key:
                 # debug
                 print(" ego car id is: ", v_id)
+                print(" v is: ", v) # ego car vehicle object
                 for car_id in predictions:
                     print("car in predictions= ", car_id) # e.g. 1, non-ego cars
 

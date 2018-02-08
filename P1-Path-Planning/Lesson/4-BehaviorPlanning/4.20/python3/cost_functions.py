@@ -17,8 +17,8 @@ for details on how useful helper data is computed.
 REACH_GOAL = 10 ** 6
 EFFICIENCY = 10 ** 5
 
-DEBUG = False
-
+#DEBUG = False
+DEBUG = True
 
 def goal_distance_cost(vehicle, trajectory, predictions, data):
     """
@@ -27,11 +27,13 @@ def goal_distance_cost(vehicle, trajectory, predictions, data):
     """
     print("-----------goal_distance_cost-----------------------")
     distance = abs(data.end_distance_to_goal)
-    if distance:
+    print("intended lane: ", data.intended_lane, " ,goal lane: ",vehicle.goal_lane, " ,final lane:  ",data.final_lane, " , distance to goal: ",distance  )
+    if (distance > 0):
         cost = 1 - 2*exp(-(abs(2.0*vehicle.goal_lane - data.intended_lane - data.final_lane) / distance))
     else:
         cost = 1
-    print("goal_distance_cost: ", cost)
+    
+    print("goal distance cost: ", cost)
     return cost
 
 
@@ -43,8 +45,10 @@ def inefficiency_cost(vehicle, trajectory, predictions, data):
     proposed_speed_intended = velocity(predictions, data.intended_lane) or vehicle.target_speed
     proposed_speed_final = velocity(predictions, data.final_lane) or vehicle.target_speed
     
+    print("intended speed: ", proposed_speed_intended, " ,target speed: ", vehicle.target_speed, " ,final speed:  ", proposed_speed_final)
     cost = float(2.0*vehicle.target_speed - proposed_speed_intended - proposed_speed_final)/vehicle.target_speed
-    print("inefficiency_cost: ", cost)
+    
+    print("inefficiency cost: ", cost)
     return cost
 
 
@@ -57,16 +61,22 @@ def calculate_cost(vehicle, trajectory, predictions, verbose=False):
     #print(trajectory_data)
     cost = 0.0
     cf_list = [goal_distance_cost, inefficiency_cost]
-    print("cf_list: ", cf_list)
+    #print("cf_list: ", cf_list)
     weight_list = [REACH_GOAL, EFFICIENCY]
     print("weight_list: ", weight_list)
 
     for weight, cf in zip(weight_list, cf_list):
-        print("weight: ", weight, " ,cf= ", cf)
+        #print("weight: ", weight, " ,cf= ", cf)
+        # goal_distance_cost(vehicle, trajectory, predictions, data):
+        # inefficiency_cost(vehicle, trajectory, predictions, data):
         new_cost = weight*cf(vehicle, trajectory, predictions, trajectory_data)
         if DEBUG or verbose:
             print ("{} has cost {} for lane {}".format(cf.__name__, new_cost, trajectory[-1].lane))
         cost += new_cost
+
+    if DEBUG:
+        print("total cost: ", cost)
+
     return cost
 
 def get_helper_data(vehicle, trajectory, predictions):
