@@ -36,6 +36,6 @@ public:
   double Compute();
 
   
-}
+};
 
 #endif
