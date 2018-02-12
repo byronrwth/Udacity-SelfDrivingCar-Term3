@@ -7,9 +7,9 @@ using namespace std;
 
 class CostFunction {
 public:
-  const double COLLISION  = pow(10,6);
-  const double DANGER     = pow(10,5);
-  const double REACH_GOAL = pow(10,5);
+  //const double COLLISION  = pow(10,6);
+  //const double DANGER     = pow(10,5);
+  //const double REACH_GOAL = pow(10,5);
   const double COMFORT    = pow(10,4);
   const double EFFICIENCY = pow(10,2);//2
 
@@ -33,6 +33,7 @@ public:
   double Collision();
   double Buffer();
   double Target();
+  
   double Compute();
 
   
