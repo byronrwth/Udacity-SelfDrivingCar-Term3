@@ -257,10 +257,22 @@ int main() {
           bool too_close_left = false;
           bool too_close_right = false;
 
-          cout << "main: before vehicle.Update: " <<  endl;
-          cout << "main: ref_vel= "  << ref_vel << endl;
-          cout << "main: car_speed= "  << car_speed << endl;
+         //cout << "main: before vehicle.Update: " <<  endl;
+         //cout << "main: ref_vel= "  << ref_vel << endl;
+         //cout << "main: car_speed= "  << car_speed << endl;
           
+          cout << "--------------main:middle lane shift-------------------" << endl;
+          double mid_shift = ( 2 + 4 * lane - car_d );
+
+          cout << "lane --- car_d --- shift :" << endl;
+          cout << "  " << lane 
+               << " --- "
+               << "  " << car_d
+               << " --- " 
+               << "  " << mid_shift << endl;
+
+          // always stick to center of lane
+          car_d += mid_shift;
           //coutompute next state
           vehicle.Update(car_x, car_y, car_s, car_d, car_yaw, car_speed, lane, ref_vel, prev_size * 0.02);
 
@@ -270,7 +282,7 @@ int main() {
           lane = vehicle.update.lane;
 
           ref_vel = vehicle.update.ref_v;
-          cout << "main: set ref_vel by vehicle.update.ref_v= "  << ref_vel << endl;
+          //cout << "main: set ref_vel by vehicle.update.ref_v= "  << ref_vel << endl;
           /*   move vehicle behaviro into vehicle.cpp
 
 

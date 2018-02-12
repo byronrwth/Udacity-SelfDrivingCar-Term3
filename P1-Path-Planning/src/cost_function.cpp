@@ -19,11 +19,14 @@ double CostFunction::Compute() {
 
   //compute cost
   // not yet to use
-  double cost = 10000000000;
-  //double cost = 0;
+  //double cost = 10000000000;
+  double cost = 0;
 
-  //cost += ChangeLane();
-  //cost += Inefficiency();
+  // try stay on lane
+  cost += ChangeLane();
+
+  // try to reach smeed limit
+  cost += Inefficiency();
 
   //cost += Collision();
 
@@ -38,8 +41,18 @@ double CostFunction::Compute() {
   return cost;
 }
 
+double CostFunction::ChangeLane(){
+  //Compute cost to change lane, penalizes lane Away fron the leftiest lane (fastest).
+  int end_lane = vehicle->trajectory.lane_end;
+  int start_lane = vehicle->trajectory.lane_start;
+  double cost = 0;
+  if(start_lane != end_lane){
+    cost += COMFORT;
+  } 
+  
+  return cost;
+}
 
-#if 0
 double CostFunction::Inefficiency() {
   //Always, the best efficiency is when the speed is closest to the limit
   double cost = 0;
@@ -47,6 +60,9 @@ double CostFunction::Inefficiency() {
   cost = pow(diff, 2) * EFFICIENCY;
   return cost;
 }
+
+#if 0
+
 
 double CostFunction::Collision() {
   double cost = 0;
