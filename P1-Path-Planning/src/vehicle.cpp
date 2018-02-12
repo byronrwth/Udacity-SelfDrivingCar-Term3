@@ -73,9 +73,11 @@ void Vehicle::_reset_data() {
 
     //reset trajectory
     trajectory.lane_start = ref_lane;
+
     trajectory.lane_end = ref_lane;
-//
+
     trajectory.target_speed = ref_speed;
+
     //cout << "vehicle: _reset_data(): trajectory.target_speed= "  << trajectory.target_speed << endl;
     
 
@@ -287,13 +289,6 @@ void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion
 
             if ((check_car_s >= s) && (dist_to_collision < 30)) {
 
-                //cout << " ------detect collision at lane: " << trajectory.lane_start << endl;
-
-                //cout << " ------detect collision distance: " << dist_to_collision << endl;
-
-                //cout << " ------detect its speed: " << check_speed << endl;
-
-
                 cout << "*****************************************************" << endl;
                 cout << "------------------detect collision-------------------" << endl;
                 cout << "distance (0 ~ 30) - check car speed " << endl;
@@ -304,8 +299,6 @@ void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion
                      
 
                 //debug = true;
-
-                
 
                 if (target_distance_front > dist_to_collision) {
 
@@ -375,7 +368,7 @@ void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion
                 collider.target_speed = check_speed * MS_TO_MPH;
             }
         }
-#endif
+
     }// end for
 
 #if 0
