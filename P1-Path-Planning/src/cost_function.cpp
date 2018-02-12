@@ -5,6 +5,10 @@
 #include <map>
 #include <math.h>
 
+const double MS_TO_MPH = 2.23694;
+ 
+const double MPH_TO_MS = 0.44704;
+
 CostFunction::CostFunction(Vehicle *v, vector<vector<double>> s) {
   vehicle = v;
   sensor_fusion = s;

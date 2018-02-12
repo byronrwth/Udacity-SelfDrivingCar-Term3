@@ -9,6 +9,7 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
 #include "spline.h"
+#include "vehicle.h"
 
 using namespace std;
 
@@ -191,14 +192,18 @@ int main() {
   }
 
   //start in lane 1:
-  int lane = 2;
+  int lane = 1 ; //2;
 
   // a refence velocity to target
   // auto ref_vel = 0 ;
   double ref_vel = 0; //49.5;  // mph
 
-  h.onMessage([&ref_vel, &map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &lane](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
-  uWS::OpCode opCode) {
+  Vehicle vehicle = Vehicle(lane, ref_vel);
+
+  h.onMessage([&lane, &ref_vel, 
+    &vehicle, 
+    &map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) 
+  {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -235,77 +240,41 @@ int main() {
           auto sensor_fusion = j[1]["sensor_fusion"];
 
           int prev_size = previous_path_x.size();
-          cout << "previous x size: " << previous_path_x.size() <<endl;
-          cout << "previous y size: " << previous_path_y.size() <<endl;
+          
+          //cout << "previous x size: " << previous_path_x.size() << endl;
+          //cout << "previous y size: " << previous_path_y.size() << endl;
 
-          cout << " -------------------------- " << endl;
+          //cout << " -------------------------- " << endl;
 
 
           /******************sensor fusion********************************/
 
-          if (prev_size > 0)
-          {
+          if (prev_size > 0) {
             car_s = end_path_s;
           }
 
-          bool too_close = false;
+          bool too_close_keeplane = false;
+          bool too_close_left = false;
+          bool too_close_right = false;
 
-          cout << " ------sensor fusion------------ " << endl;
-          cout << "sensor_fusion.size(): " << sensor_fusion.size() <<endl;
+          cout << "main: before vehicle.Update: " <<  endl;
+          cout << "main: ref_vel= "  << ref_vel << endl;
+          cout << "main: car_speed= "  << car_speed << endl;
+          
+          //coutompute next state
+          vehicle.Update(car_x, car_y, car_s, car_d, car_yaw, car_speed, lane, ref_vel, prev_size * 0.02);
 
-          cout << " -------------------------- " << endl;
+          vehicle.NextState(sensor_fusion);
 
-          //find ref_v to use
-          for( int n =0; n < sensor_fusion.size(); n++)
-          {
-            //car is in my lane
-            float d = sensor_fusion[n][6];
 
-            cout << "d= " << d <<endl;
+          lane = vehicle.update.lane;
 
-            if ( d < (2 + 4 * lane + 2) && d > (2 + 4 * lane - 2) )
-            {
+          ref_vel = vehicle.update.ref_v;
+          cout << "main: set ref_vel by vehicle.update.ref_v= "  << ref_vel << endl;
+          /*   move vehicle behaviro into vehicle.cpp
 
-              cout << " ------ there is car in my lane !--------------- " << endl;
 
-              double vx = sensor_fusion[n][3];
-              double vy = sensor_fusion[n][4];
-
-              double check_speed = sqrt(vx * vx + vy * vy);
-              double check_car_s = sensor_fusion[n][5];
-
-              //if using previous points can project s value out
-              check_car_s += ( ((double)prev_size) * 0.02 * check_speed);
-
-              // check s values greater than mine and s gap
-              if ((check_car_s > car_s) && ((check_car_s - car_s) < 30))
-              {
-                // DO some logic here, lower reference velocity so we dont crash into the car ahead of us, could 
-                // also flag to try to change lanes
-                //ref_vel = 29.5;
-                 too_close = true;
-
-                cout << " ------detect collision !------------ " << endl;
-                //out << "ref_vel reduce to: " << ref_vel <<endl;
-
-                cout << " -------------------------- " << endl;
-
-              } 
-            }
-          }
-
-          if (too_close)
-          {
-            ref_vel -= 0.224 ;
-            cout << " ------ reduce velocity 0.224 per second tobe: " << ref_vel << endl;
-          }
-          else if ( ref_vel < 49.5)
-          {
-            cout << " ------ velocity too slow: " << ref_vel << endl;
-            ref_vel += 0.224 ;
-            //ref_vel += 1 ; //0.224 ;
-            cout << " ------ increase velocity 0.224 per second tobe: " << ref_vel << endl;
-          }
+          */
 
           /******************path planning********************************/
           json msgJson;
@@ -325,7 +294,7 @@ int main() {
           }
 #endif
 
-#if 0    
+#if 0
           // test circle path
           double pos_x;
           double pos_y;
@@ -362,9 +331,8 @@ int main() {
 #if 0
           // test frenet path keep on along with lane on highway
           double dist_inc = 0.5;
-          for(int i=0; i< 50; i++)
-          {
-            double next_s = car_s+(i+1)*dist_inc ;
+          for (int i = 0; i < 50; i++) {
+            double next_s = car_s + (i + 1) * dist_inc ;
             double next_d = 6 ;
             vector<double> xy = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
@@ -388,9 +356,8 @@ int main() {
           double ref_yaw = deg2rad(car_yaw);
 
           // if previous size is almost empty, use the car as starting reference
-          if (prev_size < 2)
-          { 
-            // use 2 points that make the path tangent to the car 
+          if (prev_size < 2) {
+            // use 2 points that make the path tangent to the car
             double prev_car_x = car_x - cos(car_yaw);
             double prev_car_y = car_y - sin(car_yaw);
 
@@ -402,14 +369,13 @@ int main() {
 
           }
           // Or prev_size >=2,  use the previous path's end point as starting reference
-          else
-          {
+          else {
             // re-difine reference state as previous path end point
-            ref_x = previous_path_x[prev_size -1];
-            ref_y = previous_path_y[prev_size -1];
+            ref_x = previous_path_x[prev_size - 1];
+            ref_y = previous_path_y[prev_size - 1];
 
-            double ref_x_prev = previous_path_x[prev_size -2];
-            double ref_y_prev = previous_path_y[prev_size -2];
+            double ref_x_prev = previous_path_x[prev_size - 2];
+            double ref_y_prev = previous_path_y[prev_size - 2];
 
             ref_yaw = atan2((ref_y - ref_y_prev), (ref_x - ref_x_prev));
 
@@ -422,24 +388,30 @@ int main() {
 
           }
 
-          for (auto x : ptsx)
-          std::cout << "origin x in ptsx is " << setw(4) << x << endl;
-          std::cout << std::endl;
-          
-          for (auto y : ptsy)
-          std::cout << "origin y in ptsy is " << setw(4) << y << endl;
-          std::cout << std::endl;
-          
-          cout << " origin ptsx SIZE " << ptsx.size() << endl;
-          cout << " origin ptsy SIZE " << ptsy.size() << endl;
-          cout << " -------------------------- " << endl;
+          //for (auto x : ptsx)
+          //  std::cout << "origin x in ptsx is " << setw(4) << x << endl;
+          //std::cout << std::endl;
+//
+          //for (auto y : ptsy)
+          //  std::cout << "origin y in ptsy is " << setw(4) << y << endl;
+          //std::cout << std::endl;
+//
+          //cout << " origin ptsx SIZE " << ptsx.size() << endl;
+          //cout << " origin ptsy SIZE " << ptsy.size() << endl;
+          //cout << " -------------------------- " << endl;
 
 
           // Create three more points. one is 30 the other is 60 and the final is 90 meters away from the car's location
           //until now the list has only 3 values
           // in Frenet add evently 30m spaced points ahead of the starting reference
-          vector<double> next_wp0 = getXY( (car_s + 30), (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
-          vector<double> next_wp1 = getXY( (car_s + 60), (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
+
+          //vector<double> next_wp0 = getXY( (car_s + 30), (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
+          //vector<double> next_wp1 = getXY( (car_s + 60), (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
+          //vector<double> next_wp2 = getXY( (car_s + 90), (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
+
+          // less aggressive, to avoid max acceleration !
+          vector<double> next_wp0 = getXY( (car_s + 60), (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
+          vector<double> next_wp1 = getXY( (car_s + 75), (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
           vector<double> next_wp2 = getXY( (car_s + 90), (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y  );
 
           ptsx.push_back(next_wp0[0]);
@@ -452,23 +424,22 @@ int main() {
           ptsy.push_back(next_wp2[1]);
 
 
-          for (auto x : ptsx)
-          std::cout << " total 5 origin x in ptsx is " << setw(4) << x << endl;
-          std::cout << std::endl;
-          
-          for (auto y : ptsy)
-          std::cout << " total 5 origin y in ptsy is " << setw(4) << y << endl;
-          std::cout << std::endl;
-          
-          cout << " origin ptsx SIZE " << ptsx.size() << endl;
-          cout << " origin ptsy SIZE " << ptsy.size() << endl;
-          cout << " ---------------------------------- " << endl;
+          //for (auto x : ptsx)
+          //  std::cout << " total 5 origin x in ptsx is " << setw(4) << x << endl;
+          //std::cout << std::endl;
+//
+          //for (auto y : ptsy)
+          //  std::cout << " total 5 origin y in ptsy is " << setw(4) << y << endl;
+          //std::cout << std::endl;
+//
+          //cout << " origin ptsx SIZE " << ptsx.size() << endl;
+          //cout << " origin ptsy SIZE " << ptsy.size() << endl;
+          //cout << " ---------------------------------- " << endl;
 
           //until here the pts has five points, the car location, one previous location and 30,60 and 90 locations
 
-          for(int i=0; i < ptsx.size(); i++)
-          {
-            
+          for (int i = 0; i < ptsx.size(); i++) {
+
             //Here we need to transform the locations into local coordinates. That means the start point will be at 0,0
             // and the angle will be at 0. Because in the car's perspective the car is heading straight
             //shift car reference angle to 0 degree
@@ -479,19 +450,19 @@ int main() {
             ptsy[i] = ( shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw) );
           }
 
-          cout << " ----------- transform to car's local coordinates ------------------ " << endl;
-          for (auto x : ptsx)
-          std::cout << " total 5 origin x in ptsx is " << setw(4) << x << endl;
-          std::cout << std::endl;
-          
-          for (auto y : ptsy)
-          std::cout << " total 5 origin y in ptsy is " << setw(4) << y << endl;
-          std::cout << std::endl;
-          
-          cout << " origin ptsx SIZE " << ptsx.size() << endl;
-          cout << " origin ptsy SIZE " << ptsy.size() << endl;
-          cout << " ---------------------------------------------------- " << endl;
-
+          //cout << " ----------- transform to car's local coordinates //------------------ " << endl;
+          //for (auto x : ptsx)
+          //  std::cout << " total 5 origin x in ptsx is " << setw(4) << x << endl;
+          //std::cout << std::endl;
+//
+          //for (auto y : ptsy)
+          //  std::cout << " total 5 origin y in ptsy is " << setw(4) << y << endl;
+          //std::cout << std::endl;
+//
+          //cout << " origin ptsx SIZE " << ptsx.size() << endl;
+          //cout << " origin ptsy SIZE " << ptsy.size() << endl;
+          //cout << " ---------------------------------------------------- " << endl;
+//
 
           //Create the spline which represents the polynomial that will go through all points
           tk::spline s;
@@ -500,12 +471,11 @@ int main() {
           s.set_points(ptsx, ptsy);
 
 
-          
-          cout<<" previous x size: " <<previous_path_x.size()<<endl;
+
+          //cout << " previous x size: " << previous_path_x.size() << endl;
 
           // start with all of the previous path points from last time
-          for(int i =0; i < previous_path_x.size(); i++)
-          {
+          for (int i = 0; i < previous_path_x.size(); i++) {
             //Add the points of the previous path to the next path planner
             // this helps adding part of the previous path to the next one. This would end up making the path smoother.
             next_x_vals.push_back(previous_path_x[i]);
@@ -522,17 +492,16 @@ int main() {
 
 
           //fill up the rest of our path planner after filling it with previous points, here we will always output 50 points
-          for( int i =1; i <= 50 - previous_path_x.size(); i++)
-          {
+          for ( int i = 1; i <= 50 - previous_path_x.size(); i++) {
 
-            cout << " ref_vel = " << ref_vel << endl;
+            //cout << " ref_vel = " << ref_vel << endl;
             //now start adding the points that are required to remain the desired speed
-            double N = (target_dist/(0.02 * ref_vel/2.24));
-            double x_point = x_add_on + (target_x)/N;
+            double N = (target_dist / (0.02 * ref_vel / 2.24));
+            double x_point = x_add_on + (target_x) / N;
             double y_point = s(x_point);
 
-            cout << " in car's coordinate: x_point = " << x_point << endl;
-            cout << " in car's coordinate: y_point = " << y_point << endl;
+            //cout << " in car's coordinate: x_point = " << x_point << endl;
+            //cout << " in car's coordinate: y_point = " << y_point << endl;
 
             //set a new checkpoint
             x_add_on = x_point;
@@ -547,8 +516,8 @@ int main() {
             x_point += ref_x;
             y_point += ref_y;
 
-            cout << " globle x_point = " << x_point << endl;
-            cout << " global y_point = " << y_point << endl;
+            //cout << " globle x_point = " << x_point << endl;
+            //cout << " global y_point = " << y_point << endl;
 
             next_x_vals.push_back(x_point);
             next_y_vals.push_back(y_point);
@@ -556,16 +525,16 @@ int main() {
           }
 //#endif
 
-          for (auto x : next_x_vals)
-          std::cout << "next x value is " << setw(4) << x << endl;
-          std::cout << std::endl;
-          
-          for (auto y : next_y_vals)
-          std::cout << "next y value is " << setw(4) << y << endl;
-          std::cout << std::endl;
-          
-          cout << " next x SIZE " << next_x_vals.size() << endl;
-          cout << " next y SIZE " << next_y_vals.size() << endl;
+          //for (auto x : next_x_vals)
+          //  std::cout << "next x value is " << setw(4) << x << endl;
+          //std::cout << std::endl;
+//
+          //for (auto y : next_y_vals)
+          //  std::cout << "next y value is " << setw(4) << y << endl;
+          //std::cout << std::endl;
+//
+          //cout << " next x SIZE " << next_x_vals.size() << endl;
+          //cout << " next y SIZE " << next_y_vals.size() << endl;
 
 
 

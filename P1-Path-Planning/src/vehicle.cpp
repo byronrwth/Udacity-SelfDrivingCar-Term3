@@ -27,6 +27,11 @@ Vehicle::Vehicle(int lane, float s, float v, float a, string state) {
 
 }
 */
+const double MS_TO_MPH = 2.23694;
+ 
+const double MPH_TO_MS = 0.44704;
+
+
 Vehicle:: Vehicle(int lane, double target_speed) {
     ref_speed = target_speed;
     ref_lane = lane;
@@ -40,9 +45,14 @@ void Vehicle::Update(double ax, double ay, double as, double ad, double ayaw, do
     d = ad;
     yaw = ayaw;
     speed = aspeed;
+    
+    cout << "vehicle: Update(): speed= "  << speed << endl;
+
     delta_time = delta;
 
     ref_speed = target_speed;
+    cout << "vehicle: Update(): ref_speed= "  << ref_speed << endl;
+
     ref_lane = lane;
 
     //clean data
@@ -55,12 +65,21 @@ void Vehicle::_reset_data() {
     //reset trajectory
     trajectory.lane_start = ref_lane;
     trajectory.lane_end = ref_lane;
+
     trajectory.target_speed = ref_speed;
+    cout << "vehicle: _reset_data(): trajectory.target_speed= "  << trajectory.target_speed << endl;
+    
 
     //reset update
     update.ref_v = ref_speed;
+    cout << "vehicle: _reset_data(): update.ref_v= "  << update.ref_v << endl;
+
     update.lane = ref_lane;
-    update.target_v = 49.50;
+
+    update.target_v = 49.50; // in mph
+    cout << "vehicle: _reset_data(): update.target_v= "  << update.target_v << endl;
+
+
     collider.collision = false;
     collider.distance = 10000;
     collider.closest_approach = 10000;
@@ -135,12 +154,15 @@ void Vehicle::NextState(vector<vector<double>> sensor) {
 
     if (!collider.collision && ref_speed < update.target_v && ref_speed < 49.5) {
         update.ref_v += 0.224;
+        cout << "vehicle: NextState(): increase update.ref_v= "  << update.ref_v << endl;
+
     } else if (ref_speed > update.target_v && ref_speed > 0) {
         update.ref_v -= 0.224;
+        cout << "vehicle: NextState(): minus update.ref_v= "  << update.ref_v << endl;
     }
 
 
-    std::cout << "NEW STATE " << state << " with cost " << min_cost << "\n";
+    //std::cout << "NEW STATE " << state << " with cost " << min_cost << "\n";
 
 }
 
@@ -236,11 +258,21 @@ void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion
 
             if ((check_car_s >= s) && (dist_to_collision < 30)) {
 
+                cout << " ------detect collision at lane: " << trajectory.lane_start << endl;
+
+                cout << " ------detect collision distance: " << dist_to_collision << endl;
+
+                cout << " ------detect its speed: " << check_speed << endl;
 
                 if (target_distance_front > dist_to_collision) {
 
-                    // safety speed? what use ?
+                    // safety speed? what use ? 
+
+                    // why -2 ?
                     //target_speed_front = check_speed * MS_TO_MPH - 2;
+                    target_speed_front = check_speed * MS_TO_MPH ;
+
+                    cout << " ------target_speed_front in mph: " << target_speed_front << endl;
 
                     target_distance_front = dist_to_collision;// e.g. from 10000 to 30m
                 }
@@ -311,7 +343,9 @@ void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion
 
 #endif
     if (target_speed_front != 0 && update.target_v > target_speed_front) {
-        update.target_v = target_speed_front - 2;
+        //update.target_v = target_speed_front - 2;
+        update.target_v = target_speed_front - 0.5;
+        cout << " ------reduce my target speed to in mph: " << update.target_v << endl;
     }
 
 }
