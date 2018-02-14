@@ -65,9 +65,9 @@ void Vehicle::_reset_data() {
     //reset trajectory
     trajectory.lane_start = ref_lane;
     trajectory.lane_end = ref_lane;
-
-    trajectory.target_speed = ref_speed;
-    cout << "vehicle: _reset_data(): trajectory.target_speed= "  << trajectory.target_speed << endl;
+//
+    //trajectory.target_speed = ref_speed;
+    //cout << "vehicle: _reset_data(): trajectory.target_speed= "  << trajectory.target_speed << endl;
     
 
     //reset update
@@ -80,10 +80,10 @@ void Vehicle::_reset_data() {
     cout << "vehicle: _reset_data(): update.target_v= "  << update.target_v << endl;
 
 
-    collider.collision = false;
-    collider.distance = 10000;
-    collider.closest_approach = 10000;
-    collider.target_speed = 0;
+    //collider.collision = false;
+    //collider.distance = 10000;
+    //collider.closest_approach = 10000;
+    //collider.target_speed = 0;
 }
 
 
@@ -152,7 +152,9 @@ void Vehicle::NextState(vector<vector<double>> sensor) {
 
     float v = cost.Compute();
 
-    if (!collider.collision && ref_speed < update.target_v && ref_speed < 49.5) {
+    if (
+        //!collider.collision && 
+        ref_speed < update.target_v && ref_speed < 49.5) {
         update.ref_v += 0.224;
         cout << "vehicle: NextState(): increase update.ref_v= "  << update.ref_v << endl;
 
