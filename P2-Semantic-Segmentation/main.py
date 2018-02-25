@@ -4,7 +4,7 @@ import helper
 import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
-
+import glob
 
 #--------------------------
 # USER-SPECIFIED DATA
@@ -25,6 +25,8 @@ DROPOUT = 0.75
 
 DATA_DIRECTORY = './data'
 RUNS_DIRECTORY = './runs'
+log_dir = './log'
+
 TRAINING_DATA_DIRECTORY = './data/data_road/training'
 NUMBER_OF_IMAGES = len(glob.glob('./data/data_road/training/calib/*.*'))
 VGG_PATH = './data/vgg'
@@ -54,8 +56,8 @@ else:
 #--------------------------
 
 correct_label = tf.placeholder(tf.float32, [None, IMAGE_SHAPE[0], IMAGE_SHAPE[1], NUMBER_OF_CLASSES])
-#learning_rate = tf.placeholder(tf.float32)
-#keep_prob = tf.placeholder(tf.float32)
+learning_rate = tf.placeholder(tf.float32)
+keep_prob = tf.placeholder(tf.float32)
 
 #--------------------------
 # FUNCTIONS
@@ -71,16 +73,11 @@ def load_vgg(sess, vgg_path):
     """
     # TODO: Implement function
     #   Use tf.saved_model.loader.load to load the model and weights
-    vgg_tag = 'vgg16'
-
-    vgg_keep_prob_tensor_name = 'keep_prob:0'
-    vgg_layer3_out_tensor_name = 'layer3_out:0'
-    vgg_layer4_out_tensor_name = 'layer4_out:0'
-    vgg_layer7_out_tensor_name = 'layer7_out:0'
-
-    tf.save_model().loader.load(sess, [vgg_tag], vgg_path)
+    
+    tf.saved_model().loader.load(sess, ['vgg16'], vgg_path)
 
     graph = tf.get_default_graph()
+    writer = tf.summary.FileWriter(log_dir, sess.graph)
 
     image_input = graph.get_tensor_by_name('image_input:0')
 
@@ -252,9 +249,11 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param learning_rate: TF Placeholder for learning rate
     """
     # TODO: Implement function
+    print("--------train_nn----------")
+
     for epoch in epochs:
-        #losses, i = [], 0
-        loss_epoch, i = 0, 0
+        losses, i = [], 0
+        #loss_epoch, i = 0, 0
         for image, label in get_batches_fn(batch_size):
             # training
             i += 1
@@ -264,20 +263,28 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
                      correct_label: labels,
                      keep_prob: DROPOUT,
                      learning_rate: LEARNING_RATE }
-
+            
+            print("--------before sess.run----------")
             # https://github.com/tensorflow/tensorflow/blob/r1.5/tensorflow/python/client/session.py
             # https://www.tensorflow.org/api_docs/python/tf/Session#run
             # def run(self, fetches, feed_dict=None, options=None, run_metadata=None):
             # The value returned by run() has the same shape as the fetches argument, where the leaves are replaced by the corresponding values returned by TensorFlow
             _, partial_loss = sess.run([train_op, cross_entropy_loss], feed_dict = feed)
   
-            #losses.append(partial_loss)
-            loss_epoch += partial_loss
+            print("---> iteration: ", i, " partial loss:", partial_loss)
+            tf.summary.scalar('partial loss', partial_loss)
 
-        loss_epoch = loss_epoch / i / 1.0
+            losses.append(partial_loss)
+            #loss_epoch += partial_loss
+
+        #loss_epoch = loss_epoch / i / 1.0
+        training_loss = sum(losses) / len(losses)
+        all_training_losses.append(training_loss)
+
+
 
         print("------------------")
-        print("epoch: ", epoch + 1, " of ", EPOCHS, "training loss: ", loss_epoch)
+        print("epoch: ", epoch + 1, " of ", EPOCHS, "training loss: ", training_loss)
         print("------------------")
 
 tests.test_train_nn(train_nn)
@@ -285,10 +292,21 @@ tests.test_train_nn(train_nn)
 # float: learning_rate ;  4D[batch, height, width, number_classes]: labels
 
 
+def run_tests():
+  print("--------run_tests----------")
+
+  tests.test_layers(layers)
+  tests.test_optimize(optimize)
+  tests.test_for_kitti_dataset(DATA_DIRECTORY)
+  tests.test_train_nn(train_nn)
+
+
 def run():
     num_classes = NUMBER_OF_CLASSES
     image_shape = IMAGE_SHAPE
     learning_rate = LEARNING_RATE
+
+    print("--------run----------")
 
     data_dir = './data'
     runs_dir = './runs'
@@ -312,8 +330,7 @@ def run():
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
         # TODO: Build NN using load_vgg, layers, and optimize function
-        input_image, keep_prob, layer3_out, layer4_out, layer7_out = load_vgg(
-            sess, vgg_path)
+        input_image, keep_prob, layer3_out, layer4_out, layer7_out = load_vgg(sess, vgg_path)
 
         layer_output = layers(layer3_out, layer4_out, layer7_out, num_classes)
 
@@ -336,4 +353,7 @@ def run():
 
 
 if __name__ == '__main__':
+    #run_tests()
     run()
+    print(all_training_losses)
+
