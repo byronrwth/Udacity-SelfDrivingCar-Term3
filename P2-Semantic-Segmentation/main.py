@@ -34,10 +34,10 @@ def load_vgg(sess, vgg_path):
     vgg_layer7_out_tensor_name = 'layer7_out:0'
     
 
-    tf.save_model().loader.load(sess, [vgg_tag], vgg_tag)
+    tf.save_model().loader.load(sess, [vgg_tag], vgg_path)
     graph = tf.get_default_graph()
     w1 = graph.get_tensor_by_name(vgg_input_tensor_name)
-    keep = graph.get_tensor_by_name(vgg_input_tensor_name)
+    keep = graph.get_tensor_by_name(vgg_keep_prob_tensor_name)
 
     return w1, keep, None, None, None
 tests.test_load_vgg(load_vgg, tf)
@@ -55,6 +55,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     # TODO: Implement function
     conv_1x1 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, padding= 'same', kernel_regularizer=tf.contib.layers.l2_regularizer(1e-3))
 
+    #upsampling 1x1 conv
     output = tf.layers.conv2d_transpose(conv_1x1, num_classes, 4, 2, padding='same', kernel_regularizer=tf.contib.layers.l2_regularizer(1e-3))
 
     tf.Print(output, [tf.shape(output)[1:3]])
