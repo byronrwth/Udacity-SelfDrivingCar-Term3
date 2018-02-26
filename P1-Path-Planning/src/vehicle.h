@@ -8,13 +8,13 @@
 
 using namespace std;
 
-enum States { KL, LCL, LCR, PLCL, PLCR };
+enum class States{ KL, LCL, LCR, PLCL, PLCR };
 
 class Vehicle {
  public:
 
 
-  States state = KL;
+  States state = States::KL;
 
   struct update {
     double ref_v = 0;

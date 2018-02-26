@@ -33,7 +33,22 @@ const double MPH_TO_MS = 0.44704;
 
 bool debug = false;
 
+void print_state(States state){
 
+  if (state == States::KL) {
+    cout << "KL";
+  } else if (state == States::LCL) {
+    cout << "LCL";
+  } else if (state == States::LCR) {
+    cout << "LCR";
+  } else if (state == States::PLCL) {
+    cout << "PLCL";
+  } else if (state == States::PLCR) {
+    cout << "PCLR";
+  } else {
+    cout << "UNDEFINED";
+  }
+}
 
 Vehicle:: Vehicle(int lane, double target_speed) {
     ref_speed = target_speed;
@@ -76,6 +91,7 @@ void Vehicle::_reset_data() {
 
     trajectory.lane_end = ref_lane;
 
+
     trajectory.target_speed = ref_speed;
     update.lane = ref_lane;
 
@@ -87,6 +103,7 @@ void Vehicle::_reset_data() {
          << trajectory.lane_end
          << "  ---  "
          << ref_lane << endl;
+
 
 
 
@@ -104,7 +121,9 @@ void Vehicle::_reset_data() {
     cout << "    " << update.ref_v<< endl;
 
 
+
     collider.collision = false;
+
     //collider.distance = 10000;
     //collider.closest_approach = 10000;
     //collider.target_speed = 0;
@@ -117,28 +136,31 @@ void Vehicle::NextState(vector<vector<double>> sensor) {
 
     cout << "--------------NextState-------------------" << endl;
     cout << "current_state --- state:" << endl;
-    cout << "  " << current_state
-         << " --- "
-         << "  " << state << endl;
+    print_state(current_state);
+    cout << " --- " << endl;
+    print_state(state) ;
+    cout << "\n"  << endl;
 
     vector<States> states;
+
+
     //select reachable states
 
     // add a new element to end, len +1
-    states.push_back(KL);
+    states.push_back(States::KL);
 
     cout << "add:  KL --- new size:--- "<<states.size()<< endl;
 
 
-    if (state == PLCL) {
-        states.push_back(LCL);
-        states.push_back(PLCL);
+    if (state == States::PLCL) {
+        states.push_back(States::LCL);
+        states.push_back(States::PLCL);
         cout << "add: LCL, PLCL --- new size:--- "<<states.size()<< endl;
 
     } 
-    else if (state == PLCR) {
-        states.push_back(LCR);
-        states.push_back(PLCR);
+    else if (state == States::PLCR) {
+        states.push_back(States::LCR);
+        states.push_back(States::PLCR);
         cout << "add: LCR, PLCR --- new size:--- "<<states.size()<< endl;
 
     } 
@@ -157,7 +179,7 @@ void Vehicle::NextState(vector<vector<double>> sensor) {
             if (d < (2 + 4 * (ref_lane) + 2) && d > (2 + 4 * (ref_lane) - 2)
                     && speed > 20) {
                 //inside lane
-                states.push_back(PLCL);
+                states.push_back(States::PLCL);
                 cout << "add:  PLCL --- new size():--- "<<states.size()<< endl;
 
             }
@@ -166,7 +188,7 @@ void Vehicle::NextState(vector<vector<double>> sensor) {
             //check if lane change is over before LCR again
             if (d < (2 + 4 * (ref_lane) + 2) && d > (2 + 4 * (ref_lane) - 2)
                     && speed > 20) {
-                states.push_back(PLCR);
+                states.push_back(States::PLCR);
                 cout << "add:  PLCR --- new size():--- "<<states.size()<< endl;
 
             }
@@ -174,7 +196,7 @@ void Vehicle::NextState(vector<vector<double>> sensor) {
     }
 
 
-    States min_state = KL;
+    States min_state = States::KL;
     double  min_cost = 10000000;
 
     //compute cost of all reachable states
@@ -183,7 +205,10 @@ void Vehicle::NextState(vector<vector<double>> sensor) {
 
         //prepare state
         cout << "--------------prepare state-------------------" << endl;
-        cout << "if states["<<i<<"] --- :"<<n_state<< endl;
+        cout << "if states["<<i<<"] --- :"<< endl;
+        print_state(n_state);
+        cout << " \n "<< endl;
+
         cout << " " << speed
              << " --- "
              << " " << ref_speed  << endl;
@@ -203,7 +228,8 @@ void Vehicle::NextState(vector<vector<double>> sensor) {
             
             cout << " " << min_cost
                  << " --- "
-                 << " " << min_state  << endl;
+                 << " "   << endl;
+            print_state(min_state);
         }
 
     }
@@ -220,7 +246,9 @@ void Vehicle::NextState(vector<vector<double>> sensor) {
     //float v = cost.Compute();
     double new_value = cost.Compute();
 
-    if (!collider.collision && ref_speed < update.target_v && ref_speed < 49.5) {
+    if (
+        //!collider.collision && 
+        ref_speed < update.target_v && ref_speed < 49.5) {
         update.ref_v += 0.224;
         //cout << "vehicle: NextState(): increase update.ref_v= "  << update.ref_v << endl;
 
@@ -238,7 +266,11 @@ void Vehicle::NextState(vector<vector<double>> sensor) {
          << "  " << update.target_v << endl;
 
     // 
-    std::cout << "NEW STATE " << state << " with cost " << min_cost << "\n";
+    std::cout << "NEW STATE: " << endl;
+    print_state(state);
+    std::cout << "\n" << std::endl;
+
+    std::cout << " with cost " << min_cost << "\n";
 
 }
 
@@ -247,51 +279,55 @@ void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion
 
     state = astate;
     cout << "--------------_realise_state state-------------------" << endl;
-    cout << "   " << state << "   "  << endl;
+    cout << " state:  " <<endl;
+    print_state(state);
+    cout << " \n  " <<endl;
 
-
-    switch (state) {
-    case KL: {
+    if (state == States::KL) {
         //same lane
         trajectory.lane_start = ref_lane;
         trajectory.lane_end = ref_lane;
         update.lane = ref_lane;
-        break;
+
     }
 
-    case PLCL: {
+    else if (state == States::PLCL)  {
         //same lane
         trajectory.lane_start = ref_lane;
 
         trajectory.lane_end = ref_lane - 1;
         update.lane = ref_lane;
-        break;
+
     }
-    case LCL: {
+    else if (state == States::LCL)  {
         //same lane
         trajectory.lane_start = ref_lane;
         trajectory.lane_end = ref_lane - 1;
         update.lane = ref_lane - 1;
-        break;
+
     }
-    case PLCR: {
+    else if (state == States::PLCR) {
         //same lane
         trajectory.lane_start = ref_lane;
         trajectory.lane_end = ref_lane + 1;
         update.lane = ref_lane;
-        break;
+
     }
-    case LCR: {
+    else if (state == States::LCR) {
         //same lane
         trajectory.lane_start = ref_lane;
         trajectory.lane_end = ref_lane + 1;
         update.lane = ref_lane + 1;
-        break;
+
+    }
+    else {
+        std::cout << "STATE ERROR\n";
     }
 
     cout << "state - ref_lane - trajectory.lane_start - trajectory.lane_end - update.lane:" << endl;
-    cout << "  " << state
-         << " -- "
+    cout << "  " << endl;
+    print_state(state);
+    cout << " -- "
          << "  " << ref_lane
          << " -- "
          << "  " << trajectory.lane_start
@@ -300,10 +336,6 @@ void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion
          << " -- "
          << "  " << update.lane << endl;
 
-
-    default:
-        std::cout << "STATE ERROR\n";
-    }
 
     //check lane
     if (trajectory.lane_end < 0) {
@@ -355,7 +387,7 @@ void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion
 
             if ((check_car_s >= s) && (dist_to_collision < 30)) {
 
-                cout << "*****************************************************" << endl;
+                cout << "                                                     " << endl;
                 cout << "------------------detect collision-------------------" << endl;
                 cout << "distance (0 ~ 30) - check car speed " << endl;
                 cout << "  " << dist_to_collision
@@ -463,7 +495,7 @@ void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion
         cout << "  " << update.target_v
              << endl;
         cout << "-----------------------------------------------------" << endl;
-        cout << "*****************************************************" << endl;
+        cout << "                                                     " << endl;
     }
 
 
