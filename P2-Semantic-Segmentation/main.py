@@ -76,6 +76,7 @@ def load_vgg(sess, vgg_path):
     # TODO: Implement function
     #   Use tf.saved_model.loader.load to load the model and weights
 
+
     model = tf.saved_model.loader.load(sess, ['vgg16'], vgg_path)
 
     graph = tf.get_default_graph()
@@ -84,6 +85,7 @@ def load_vgg(sess, vgg_path):
     image_input = graph.get_tensor_by_name('image_input:0')
 
     keep_prob = graph.get_tensor_by_name('keep_prob:0')
+
 
     #pool1 = graph.get_tensor_by_name('pool1:0')
     #pool2 = graph.get_tensor_by_name('pool2:0')
@@ -154,6 +156,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     """
     # TODO: Implement function
 
+
     #---------------------------------- " regularization " ------------------------------#
 
     # output = tf.layers.dense(input, num_classes) ==>
@@ -194,6 +197,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     # Add decoder layers to the network with skip connections and upsampling
     # Note: the kernel size and strides are the same as the example in Udacity Lectures
     # Semantic Segmentation Scene Understanding Lesson 10-9: FCN-8 - Decoder
+
 
     # (1, 5, 18, 2) -> (1, 10, 36, 2)
     decoderlayer1 = upsample(layer=layer7x, k=4, s=2,
