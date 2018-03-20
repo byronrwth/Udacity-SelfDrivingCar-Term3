@@ -33,6 +33,11 @@ const double MPH_TO_MS = 0.44704;
 
 bool debug = false;
 
+bool debug_distance = false;
+bool debug_speed = false;
+bool debug_state = false;
+bool debug_cost = true;
+
 void print_state(States state){
 
   if (state == States::KL) {
@@ -219,7 +224,10 @@ void Vehicle::NextState(vector<vector<double>> sensor) {
         CostFunction cost = CostFunction(this, sensor);
 
         double value = cost.Compute();
-        cout << " cost --- :"<<value<< endl;
+        if (debug_cost == true) {
+            cout << " cost --- :"<<value<< endl;
+        }
+        
 
         if (value < min_cost) {
             min_state = n_state;
@@ -389,15 +397,15 @@ void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion
 
                 cout << "                                                     " << endl;
                 cout << "------------------detect collision-------------------" << endl;
-                cout << "distance (0 ~ 30) - check car speed " << endl;
+                cout << "distance (0 ~ 30) - check car speed NO.(" << i << ")" << endl;
                 cout << "  " << dist_to_collision
                      << " --- "
                      << "  " << check_speed
                      << " --- " << endl;
 
 
-                //debug = true;
-
+                //debug_distace = true;
+                // if multiple cars in front and within 30m collision distance, use the closest car as archering car, and its speed as archer speed
                 if (target_distance_front > dist_to_collision) {
 
                     // safety speed? what use ?
