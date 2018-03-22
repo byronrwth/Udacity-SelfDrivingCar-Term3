@@ -25,7 +25,7 @@ class Vehicle {
   struct collider {
     bool collision = false;
     double distance = 0;
-    double closest_approach = 1000;
+    double changelane_gap = 1000;
     double target_speed = 0;
   } collider;
 
@@ -47,10 +47,12 @@ class Vehicle {
 
   double delta_time = 0;
 
-  double prev_speed = 0.0;
-  double prev_accel = 0.0;
-  double accel = 0.0;
-  double jerk = 0.0;
+  // only to calc monitor max speed, acceleration, jerk !
+  double speed_mps = 0.0; // in m/s mps
+  double prev_speed_mps = 0.0; // in m/s mps 
+  double prev_accel_mpss = 0.0;  // in m/s/s 
+  double accel_mpss = 0.0;      // in m/s/s 
+  double jerk_mpsss = 0.0;    // in m/s/s/s 
 
   /**
   * Constructor

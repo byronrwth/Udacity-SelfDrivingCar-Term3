@@ -7,15 +7,14 @@ using namespace std;
 
 class CostFunction {
   public:
-    const double COLLISION  = pow(10,6); //pow(10, 2); //pow(10,6);
-    const double BUFFER     = pow(10,5); //pow(10, 2); //pow(10,5);
-    //const double REACH_GOAL = pow(10,5);
-    const double CHANGELANE    = pow(10, 4); //pow(10, 2); //pow(10, 4);
+    const double COLLISION             = pow(10,6); //pow(10, 2); //pow(10,6);
+    const double CHANGELANE_DANGER     = pow(10,5); //pow(10, 2); //pow(10,5);
+    const double CHANGELANE_COMFORT    = pow(10, 4); //pow(10, 2); //pow(10, 4);
     const double INEFFICIENCY = pow(10, 2); //2
-    const double TARGET = pow(10, 2);
+    const double TARGET = 100; //pow(10, 2);
 
 
-    const double DESIRED_BUFFER = 1;//1.5;
+    const double CHANGELANE_DURATION = 1;//1.5;
     const double PLANNING_HORIZON = 2;
 
     vector<vector<double>> sensor_fusion;
@@ -29,11 +28,11 @@ class CostFunction {
     /*
      * Cost functions
      */
-    double ChangeLane();
-    double DistanceGoalLane();
+    double changelane_comfort();
+    //double DistanceGoalLane();
     double Inefficiency();
     double Collision();
-    double Buffer();
+    double changelane_danger();
     double Target();
 
     double Compute();
