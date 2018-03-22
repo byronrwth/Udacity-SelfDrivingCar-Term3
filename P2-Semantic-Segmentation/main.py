@@ -15,7 +15,9 @@ import glob
 NUMBER_OF_CLASSES = 2
 IMAGE_SHAPE = (160, 576)
 
+
 EPOCHS = 30 #1  # 2  # 20
+
 BATCH_SIZE = 1
 
 LEARNING_RATE = 0.0001
@@ -127,6 +129,8 @@ def conv_1x1(layer, layer_name):
                             kernel_size=(1, 1),
                             strides=(1, 1),
                             # weights_initializer=custom_init
+                            padding='same',
+                            kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3),
                             name=layer_name)
 
 
@@ -139,6 +143,7 @@ def upsample(layer, k, s, layer_name):
                                       kernel_size=(k, k),
                                       strides=(s, s),
                                       padding='same',
+                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3),
                                       name=layer_name)
 
 
@@ -163,6 +168,10 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     # conv_1x1 to convolutional transpose: (batch_size, original_height, original_width, num_classes)
     #output = tf.layers.conv2d_transpose(input, num_classes, 4, strides=(2, 2))
     #output = tf.layers.conv2d_transpose(conv_1x1, num_classes, 4, 2, padding='same', kernel_regularizer=tf.contib.layers.l2_regularizer(1e-3))
+
+    #vgg_layer3_out = tf.multiply(vgg_layer3_out, 0.0001)
+    #vgg_layer4_out = tf.multiply(vgg_layer4_out, 0.01)
+
 
     # Apply a 1x1 convolution to encoder layers
     layer3x = conv_1x1(layer=vgg_layer3_out, layer_name="layer3conv1x1")

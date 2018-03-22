@@ -1,11 +1,10 @@
-# CarND-Path-Planning-Project
-Self-Driving Car Engineer Nanodegree Program
+## P1-Path-Planning
    
-### Simulator.
-You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases).
-
 ### Goals
 In this project your goal is to safely navigate around a virtual highway with other traffic that is driving +-10 MPH of the 50 MPH speed limit. You will be provided the car's localization and sensor fusion data, there is also a sparse map list of waypoints around the highway. The car should try to go as close as possible to the 50 MPH speed limit, which means passing slower traffic when possible, note that other cars will try to change lanes too. The car should avoid hitting other cars at all cost as well as driving inside of the marked road lanes at all times, unless going from one lane to another. The car should be able to make one complete loop around the 6946m highway. Since the car is trying to go 50 MPH, it should take a little over 5 minutes to complete 1 loop. Also the car should not experience total acceleration over 10 m/s^2 and jerk that is greater than 10 m/s^3.
+
+### Simulator.
+You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases).
 
 #### The map of the highway is in data/highway_map.txt
 Each waypoint in the list contains  [x,y,s,dx,dy] values. x and y are the waypoint's map coordinate position, the s value is the distance along the road to get to that waypoint in meters, the dx and dy values define the unit normal vector pointing outward of the highway loop.
@@ -87,54 +86,55 @@ A really helpful resource for doing this project and creating smooth trajectorie
     git checkout e94b6e1
     ```
 
-## Editor Settings
+---
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
+**1. Project files**
+* main.cpp
+    * receive msg(lane, target_speed_mph, vehicle object,waypoints[x,y], array[s,d]) from simulator
+* cost_function.cpp, cost_function.h
+    * define multi type costs e.g. collision, changelane and inefficiency...and calc realtime sum(costs) for each input condition
+* vehicle.cpp, vehicle.h
+    * maintain & monitor vehicle object's current speed, target speed, acceleration, jerk, lane, target lane, FSM states
+* spline.h
+    * added for usage of spline polynomial represenation for all waypoints
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+**2. Project Outline**
 
-## Code Style
-
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
-
-## Project Instructions and Rubric
-
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
+###### The goals / steps of this project are the following:
+* design acceleration to let vehicle reach 50mph on the initialized lane
+* design collision ahead detection, if collision is possible the vehicle starts to brake until relative statick with ahead obstacle car
+* design various cost functions, in above case the vehicle will calc at each timestamp for sum(costs) of 1) collision: too close to other car is heavily punished 2) too slow staying on same lane and cannot reach max.speed 49.5mph will be punished for inefficiency 3) change lane discomfort penalty 4) too slow to reach the possible target speed = front car speed, if blocked by front car
+* design FSM state buffer, for each timestamp the vechile will calc the minimum sum(costs) of any possible next_state, which is derived from current_state in FSM 
+* once minimum next_state is chosen, the vehicle will immediately update its state, target_lane, target_speed with the next_state, i.e. switch into this new state in FSM
 
 
-## Call for IDE Profiles Pull Requests
 
-Help your fellow students!
 
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to ensure
-that students don't feel pressured to use one IDE or another.
 
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
+**3. FSM states**
 
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
+![](img/fsm.PNG)
 
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
+The FSM starts with:
+* Keep Lane (KP) state. Depending on the system context (highway), the FSM may stay at KP state or change to Prepare to Change Lane Left or Right. At each state, all possible states are evaluated using a cost function and the state with the minimum cost is selected. The FSM machine works as follow:
 
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
+* prepare to change lanes (PLCL or PLCR). However, only the possible lane change (PLCL or PLCR) is available if the car is in one of the lateral lanes (lanes 0 or 2); The car will stay in the same lane (KL) if there is no other vehicle that prevents it from reaching the maximum legal speed limit of the road.
 
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
+  If the PLCL or PLCR are selected, the car prepares to change lane. The preparation checks if the car speed and the buffer space are safe to change lance. The car may stay in the PLC_ state until the buffer is safe enough to change lane or even decide to return to state KL (same lane) if the cost to change the lane is no longer relevant;
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+* When there is enough buffer space to change lane, the FSM will transition to LCL/LCR states. The FSM returns to state KL as soon the lane change is over (car is between the lane lines).
 
+**4. cost functions**
+
+
+* collision cost: most majorirty cost
+
+* change lane cost: to avoid the vehicle change lane with no costs
+
+* inefficiency cost: to punish the vehicle stays on lane with lower speed than 50 mph and when there is gap for lane change but vehicle is too lazy for change
+
+
+**5. path generation with spline**
+
+
+**6. max speed, acceleration and jerk control**

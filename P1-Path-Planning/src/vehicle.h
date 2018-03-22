@@ -47,6 +47,10 @@ class Vehicle {
 
   double delta_time = 0;
 
+  double prev_speed = 0.0;
+  double prev_accel = 0.0;
+  double accel = 0.0;
+  double jerk = 0.0;
 
   /**
   * Constructor
