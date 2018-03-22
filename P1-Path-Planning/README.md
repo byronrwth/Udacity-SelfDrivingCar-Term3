@@ -55,7 +55,7 @@ the path has processed since last time.
 
 ## Details
 
-1. The car uses a perfect controller and will visit every (x,y) point it recieves in the list every .02 seconds. The units for the (x,y) points are in meters and the spacing of the points determines the speed of the car. The vector going from a point to the next point in the list dictates the angle of the car. Acceleration both in the tangential and normal directions is measured along with the jerk, the rate of change of total Acceleration. The (x,y) point paths that the planner recieves should not have a total acceleration that goes over 10 m/s^2, also the jerk should not go over 50 m/s^3. (NOTE: As this is BETA, these requirements might change. Also currently jerk is over a .02 second interval, it would probably be better to average total acceleration over 1 second and measure jerk from that.
+1. The car uses a perfect controller and will visit every (x,y) point it recieves in the list every .02 seconds. The units for the (x,y) points are in meters and the spacing of the points determines the speed of the car. The vector going from a point to the next point in the list dictates the angle of the car. Acceleration both in the tangential and normal directions is measured along with the jerk, the rate of change of total Acceleration. The (x,y) point paths that the planner recieves should not have a total acceleration that goes over 10 m/s^2, also the jerk should not go over 10 m/s^3. (NOTE: As this is BETA, these requirements might change. Also currently jerk is over a .02 second interval, it would probably be better to average total acceleration over 1 second and measure jerk from that.
 
 2. There will be some latency between the simulator running and the path planner returning a path, with optimized code usually its not very long maybe just 1-3 time steps. During this delay the simulator will continue using points that it was last given, because of this its a good idea to store the last points you have used so you can have a smooth transition. previous_path_x, and previous_path_y can be helpful for this transition since they show the last points given to the simulator controller with the processed points already removed. You would either return a path that extends this previous path or make sure to create a new path that has a smooth transition with this last path.
 
@@ -115,26 +115,52 @@ A really helpful resource for doing this project and creating smooth trajectorie
 
 ![](img/fsm.PNG)
 
-The FSM starts with:
-* Keep Lane (KP) state. Depending on the system context (highway), the FSM may stay at KP state or change to Prepare to Change Lane Left or Right. At each state, all possible states are evaluated using a cost function and the state with the minimum cost is selected. The FSM machine works as follow:
+The FSM works this way: 
+* Depending on the system context (highway), the FSM may stay at KP state or change to Prepare to Change Lane Left or Right. At each state, all possible states are evaluated using a cost function and the state with the minimum cost is selected. 
+    * Keep Lane (KP) state. The car will stay in the same lane (KL) if there is no other vehicle that prevents it from reaching the maximum legal speed limit of the road.
 
-* prepare to change lanes (PLCL or PLCR). However, only the possible lane change (PLCL or PLCR) is available if the car is in one of the lateral lanes (lanes 0 or 2); The car will stay in the same lane (KL) if there is no other vehicle that prevents it from reaching the maximum legal speed limit of the road.
+    * prepare to change lanes (PLCL or PLCR). only the possible lane change (PLCL or PLCR) is available if the car is in one of the lateral lanes (lanes 0 or 2); 
+If the PLCL or PLCR are selected, the car prepares to change lane. The preparation checks if the car speed and the buffer space are safe to change lance. The car may stay in the PLC_ state until the buffer is safe enough to change lane or even decide to return to state KL (same lane) if the cost to change the lane is no longer relevant;
 
-  If the PLCL or PLCR are selected, the car prepares to change lane. The preparation checks if the car speed and the buffer space are safe to change lance. The car may stay in the PLC_ state until the buffer is safe enough to change lane or even decide to return to state KL (same lane) if the cost to change the lane is no longer relevant;
-
-* When there is enough buffer space to change lane, the FSM will transition to LCL/LCR states. The FSM returns to state KL as soon the lane change is over (car is between the lane lines).
+    * LCL/LCR: When there is enough buffer space to change lane, the FSM will transition to LCL/LCR states. The FSM returns to state KL as soon the lane change is over (car is between the lane lines).
 
 **4. cost functions**
-
-
+![](img/cost_function.png)
+![](img/cost_efficience.PNG)
 * collision cost: most majorirty cost
+    * from above picture, to avoid collision (to ahead) is the primary requirement for behavior planning design, therefore I set 10e6 as coefficience for collision cost; 
+    * the less time to rush to the ahead car, the closer the collision distance, the higher the cost;
+    * however, if in neighboring lane, if there is enough time to change lane, time_to_collide > CHANGELANE_DURATION = 1 second, then collision cost reduce by /10, to be at same level as change lane danger, otherwise collision cost can 10 times larger, i.e. always occupy 90% of sum(costs), then vehicle won't dare to change lane !
+![](img/collision.PNG)
 
 * change lane cost: to avoid the vehicle change lane with no costs
+    * set change lane security buffer CHANGELANE_DURATION = 1 second, in time_steps the ego vehicle will crash to neighboring car in the target lane, if there is enough discance gap and time_steps, cost is 0;
+    * else the more time_steps the less cost;
+    * if the distance gap collider.changelane_gap < 0, means there is only neighboring car on target lane but at behind, then because from speed control I have guarantee ego vehicle is always faster than behind cars, so change lane cost now can be reduced by /10
+![](img/changelane_danger.PNG)
+
+* change lane comfort cost:
+    * set this cost to avoid unnecessary frequent lane changes
+![](img/changelane_comfort.PNG)
 
 * inefficiency cost: to punish the vehicle stays on lane with lower speed than 50 mph and when there is gap for lane change but vehicle is too lazy for change
+    * the closer vehicle speed to max speed 49.5 mph, the lower the cost
+![](img/inefficiency.PNG)
 
+* target cost: 
+    * the closer vehicle speed to target speed set by neighboring cars, the lower the cost
+![](img/target.PNG)
 
 **5. path generation with spline**
+Spline is a piecewise "polynomial" parametric curve. They are popular for their simplicity of use and accuracy. Our path planner uses the Spline mathematical function for curve fitting the generated map coordinates. The spline helps to define a smooth path for the car 
 
-
+The path generation is an elaborate set of tasks. First, our planner has to generate equally spaced map coordinates. We use the helper function "getXY" to generate points from Freenet to Cartesian coordinates.
+![](img/frenet.PNG)
+After, we shift the orientation to the ego car for simplicity and feed the points to the spline generator. We used the Cubic Spline library to generate the spline curve.
+![](img/spline.PNG)
+After, with the spline function already done, we have to recompute the map points back from the curve. This task is accomplished by breaking up the spline into equidistant points that respect the desired speed (see Figure X).
+![](img/figurex.PNG)
+Finally, the final part is to compute the coordinates from spline and shift its orientation back.
+![](img/back.PNG)
 **6. max speed, acceleration and jerk control**
+![](img/speedcontrol.PNG)

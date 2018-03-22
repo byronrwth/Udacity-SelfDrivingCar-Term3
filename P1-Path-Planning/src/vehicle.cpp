@@ -74,27 +74,28 @@ void Vehicle::Update(double ax, double ay, double as, double ad, double ayaw, do
     s = as;
     d = ad;
     yaw = ayaw;
-    speed = aspeed;  // in m/s
+    speed = aspeed;  // in mph
 
     delta_time = delta;
     //std::cout << "********************** delta_time : " << delta_time << "*******************************" << std::endl;
-    
-    accel = abs(speed - prev_speed ) / delta_time /1.0 ; // m/s/s
-    jerk = abs(accel - prev_accel) / delta_time /1.0 ;  // m/s/s/s
+    speed_mps = speed * MPH_TO_MS ;
+
+    accel_mpss = abs(speed_mps - prev_speed_mps ) / delta_time /1.0 ; // m/s/s
+    jerk_mpsss = abs(accel_mpss - prev_accel_mpss) / delta_time /1.0 ;  // m/s/s/s
 
 
 
     if (debug_jerk) {
         
-        cout << "             accel:" << accel << "        jerk:" << jerk << "             " << endl;
+        cout << "             accel:" << accel_mpss << "        jerk:" << jerk_mpsss << "             " << endl;
 
     }
 
-    if ( accel > 10 || jerk > 10 ) {
+    if ( accel_mpss > 10 || jerk_mpsss > 10 ) {
         std::cout << "\n" << std::endl;
         std::cout << "********************** exceed !! *******************************" << std::endl;
         std::cout << "********************************************************" << std::endl;
-        std::cout << "***************** accel :" << accel << "      jerk: " << jerk << "***************" <<std::endl;
+        std::cout << "***************** accel :" << accel_mpss << "      jerk: " << jerk_mpsss << "***************" <<std::endl;
         std::cout << "********************************************************" << std::endl;
         std::cout << "********************************************************" << std::endl;
         std::cout << "\n" << std::endl;
@@ -104,29 +105,29 @@ void Vehicle::Update(double ax, double ay, double as, double ad, double ayaw, do
 
 
     // set 9.5 m/s/s as secure buffer, now reduce speed to avoid exceed Max accel
-    if ( accel > 9.5 ) {
-        if (speed > prev_speed) {
-            speed = prev_speed + 9.5 ;
-            cout << "    accel limit speed to be:" << speed <<"       " << endl;
+    if ( accel_mpss > 9.5 ) {
+        if (speed_mps > prev_speed_mps) {
+            speed_mps = prev_speed_mps + 9.5 ;
+            cout << "    accel limit speed to be:" << speed_mps <<"       " << endl;
         }
         else {
-            speed = prev_speed - 9.5 ;
-            cout << "    brake limit speed to be:" << speed <<"       " << endl;
+            speed_mps = prev_speed_mps - 9.5 ;
+            cout << "    brake limit speed to be:" << speed_mps <<"       " << endl;
         }
     }
-    if ( jerk > 9.5 ) {
-        if (accel > prev_accel) {
-            accel = prev_accel + 9.5 ;
-            cout << "    jerk limit accel to be:" << accel <<"       " << endl;
+    if ( jerk_mpsss > 9.5 ) {
+        if (accel_mpss > prev_accel_mpss) {
+            accel_mpss = prev_accel_mpss + 9.5 ;
+            cout << "    jerk limit accel to be:" << accel_mpss <<"       " << endl;
         }
         else {
-            accel = prev_accel - 9.5 ;
-            cout << "    jerk limit brake to be:" << accel <<"       " << endl;
+            accel_mpss = prev_accel_mpss - 9.5 ;
+            cout << "    jerk limit brake to be:" << accel_mpss <<"       " << endl;
         }
     }
 
-    prev_accel = accel ;
-    prev_speed = speed ;
+    prev_accel_mpss = accel_mpss ;
+    prev_speed_mps = speed_mps ;
 
 
 
@@ -184,7 +185,7 @@ void Vehicle::_reset_data() {
     // enable collistion cost
     collider.collision = false;
     collider.distance = 10000;
-    collider.closest_approach = 10000;
+    collider.changelane_gap = 10000;
     collider.target_speed = 0;
 }
 
@@ -519,43 +520,43 @@ void Vehicle::_realise_state(States astate, vector<vector<double>> sensor_fusion
             check_car_s += ((double) delta_time * check_speed);
 
             //check s values greater than mine and s gap
-            double dist_to_collision = (check_car_s - s);
+            double changelane_gap = (check_car_s - s);
 
-            if ((trajectory.lane_end != trajectory.lane_start  && (abs(dist_to_collision) < 30))
-                 || ((check_car_s >= s) && (dist_to_collision < 30))) {
+            if ((trajectory.lane_end != trajectory.lane_start  && (abs(changelane_gap) < 30))
+                 || ((check_car_s >= s) && (changelane_gap < 30))) {
 
-                if (collider.distance > abs(dist_to_collision)) {
-                    collider.distance = abs(dist_to_collision);
+                if (collider.distance > abs(changelane_gap)) {
+                    collider.distance = abs(changelane_gap);
                     collider.collision = true;
-                    collider.closest_approach = abs(dist_to_collision);
+                    collider.changelane_gap = abs(changelane_gap);
                     collider.target_speed = check_speed * MS_TO_MPH;
 
-                    //if (abs(dist_to_collision) > 30) {
-                    if (abs(dist_to_collision) < 30) {
-                        //cout << "==============abs(dist_to_collision) > 30==============================" << endl;
+                    //if (abs(changelane_gap) > 30) {
+                    if (abs(changelane_gap) < 30) {
+                        //cout << "==============abs(changelane_gap) > 30==============================" << endl;
                         
-                        //change targe speed
+                        //change targe speed, when need lane change but gap too small
                         if (check_car_s >= s) {
                             //car in front
                             update.target_v = check_speed * MS_TO_MPH - 2;
-                            if (target_distance_lane_front > dist_to_collision) {
+                            if (target_distance_lane_front > changelane_gap) {
                                 target_speed_lane_front = check_speed * MS_TO_MPH;
-                                target_distance_lane_front = dist_to_collision;
+                                target_distance_lane_front = changelane_gap;
                             }
                         } else {
                             //car in back
                             update.target_v = check_speed * MS_TO_MPH + 2;
-                            if (target_distance_lane_back < dist_to_collision) {
+                            if (target_distance_lane_back < changelane_gap) {
                                 target_speed_lane_back = check_speed * MS_TO_MPH;
-                                target_distance_lane_back = dist_to_collision;
+                                target_distance_lane_back = changelane_gap;
                             }
                         }
                     }
                 }
             } 
             else if (!collider.collision
-                       && collider.closest_approach > dist_to_collision) {
-                collider.closest_approach = dist_to_collision;
+                       && collider.changelane_gap > changelane_gap) {
+                collider.changelane_gap = changelane_gap;
                 collider.target_speed = check_speed * MS_TO_MPH;
             }
         }// if sensor a car on other lane
