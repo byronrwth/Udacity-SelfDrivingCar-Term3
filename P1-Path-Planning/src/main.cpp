@@ -11,10 +11,18 @@
 #include "spline.h"
 #include "vehicle.h"
 
+//#include <ctime> //get simulator sys time
+
+
 using namespace std;
 
 // for convenience
 using json = nlohmann::json;
+
+
+
+bool debug_shift = false;
+
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
@@ -200,6 +208,8 @@ int main() {
 
   Vehicle vehicle = Vehicle(lane, ref_vel);
 
+
+
   h.onMessage([&lane, &ref_vel, 
     &vehicle, 
     &map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) 
@@ -221,13 +231,19 @@ int main() {
         if (event == "telemetry") {
           // j[1] is the data JSON object
 
+          //using namespace std::chrono;
+          //milliseconds ms = duration_cast< milliseconds >(
+          //    system_clock::now().time_since_epoch()
+          //);
+          //cout << "-------------------- ms ----------------------:" << ms << endl;
+
           // Main car's localization Data
           double car_x = j[1]["x"];
           double car_y = j[1]["y"];
           double car_s = j[1]["s"];
           double car_d = j[1]["d"];
           double car_yaw = j[1]["yaw"];
-          double car_speed = j[1]["speed"];
+          double car_speed = j[1]["speed"]; // meter per second, m/s
 
           // Previous path data given to the Planner
           auto previous_path_x = j[1]["previous_path_x"];
@@ -261,28 +277,66 @@ int main() {
          //cout << "main: ref_vel= "  << ref_vel << endl;
          //cout << "main: car_speed= "  << car_speed << endl;
           
-          cout << "--------------main:middle lane shift-------------------" << endl;
           double mid_shift = ( 2 + 4 * lane - car_d );
 
-          cout << "lane --- car_d --- shift :" << endl;
-          cout << "  " << lane 
-               << " --- "
-               << "  " << car_d
-               << " --- " 
-               << "  " << mid_shift << endl;
+          if (debug_shift) {
+            cout << "-------------------- main ----------------------" << endl;
+            cout << "---------------middle lane shift----------------" << endl;
+            
+
+            cout << "lane --- car_d --- shift :" << endl;
+            cout << "  " << lane 
+                 << " --- "
+                 << "  " << car_d
+                 << " --- " 
+                 << "  " << mid_shift << endl;
+            
+            cout << "------------------ end main ----------------------" << endl;
+          }
+
 
           // always stick to center of lane
           car_d += mid_shift;
           //coutompute next state
+
+          // car_speed --> real car speed caught from simulator 
+
+          // ref_vel  --> target speed ????
+
+
           vehicle.Update(car_x, car_y, car_s, car_d, car_yaw, car_speed, lane, ref_vel, prev_size * 0.02);
 
           vehicle.NextState(sensor_fusion);
 
+          if (lane != vehicle.update.lane) {
+              std::cout << "\n" << std::endl;
+              std::cout << "********************************************************" << std::endl;
+              std::cout << "********************************************************" << std::endl;
+              std::cout << "***************** change from lane:" << lane << " to lane: " << vehicle.update.lane << "***************" <<std::endl;
+              std::cout << "********************************************************" << std::endl;
+              std::cout << "********************************************************" << std::endl;
+              std::cout << "\n" << std::endl;
+          }
 
           lane = vehicle.update.lane;
 
+          // update target speed
           ref_vel = vehicle.update.ref_v;
-          //cout << "main: set ref_vel by vehicle.update.ref_v= "  << ref_vel << endl;
+          
+          //ref_vel = car_speed; // car_speed init at 0, then car won't move when simulation begins !!
+
+
+
+          //cout << " -------    car_speed   ---   ref_vel  -----" << endl;
+          //cout << " -------    " << car_speed
+          //     << "   ---   "
+          //     << " " << ref_vel << "-----" << endl;
+
+
+
+          //cout << " ref_vel differ from car_speed %:" << ((ref_vel - car_speed) / ref_vel / 1.0 * 100)  << endl;
+          //cout << " car_speed differ from ref_vel %:" << ((car_speed - ref_vel) / car_speed / 1.0 * 100)  << endl;
+          // cout << "main: set ref_vel by vehicle.update.ref_v= "  << ref_vel << endl;
           /*   move vehicle behaviro into vehicle.cpp
 
 
@@ -449,7 +503,6 @@ int main() {
           //cout << " ---------------------------------- " << endl;
 
           //until here the pts has five points, the car location, one previous location and 30,60 and 90 locations
-
           for (int i = 0; i < ptsx.size(); i++) {
 
             //Here we need to transform the locations into local coordinates. That means the start point will be at 0,0
@@ -508,7 +561,12 @@ int main() {
 
             //cout << " ref_vel = " << ref_vel << endl;
             //now start adding the points that are required to remain the desired speed
+            // 50 mph == 22.4mps, i.e. ref_vel (mph) /50 x 22.4 => speed in mps, ref_vel in mph / 2.24 = in m/s
             double N = (target_dist / (0.02 * ref_vel / 2.24));
+
+
+            //double N = (target_dist / (0.02 * car_speed / 2.24));  // car_speed init with 0, then no green dots waypoints and car won't move !!!
+
             double x_point = x_add_on + (target_x) / N;
             double y_point = s(x_point);
 
