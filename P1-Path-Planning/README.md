@@ -98,6 +98,9 @@ A really helpful resource for doing this project and creating smooth trajectorie
 * spline.h
     * added for usage of spline polynomial represenation for all waypoints
 
+Here's a [ 5 miles collision-free video ](https://youtu.be/jPfdbxCvk8k)
+
+
 **2. Project Outline**
 
 ###### The goals / steps of this project are the following:
@@ -156,11 +159,16 @@ Spline is a piecewise "polynomial" parametric curve. They are popular for their 
 
 The path generation is an elaborate set of tasks. First, our planner has to generate equally spaced map coordinates. We use the helper function "getXY" to generate points from Freenet to Cartesian coordinates.
 ![](img/frenet.PNG)
+
 After, we shift the orientation to the ego car for simplicity and feed the points to the spline generator. We used the Cubic Spline library to generate the spline curve.
 ![](img/spline.PNG)
+
 After, with the spline function already done, we have to recompute the map points back from the curve. This task is accomplished by breaking up the spline into equidistant points that respect the desired speed (see Figure X).
 ![](img/figurex.PNG)
+
 Finally, the final part is to compute the coordinates from spline and shift its orientation back.
 ![](img/back.PNG)
+
 **6. max speed, acceleration and jerk control**
+
 ![](img/speedcontrol.PNG)
