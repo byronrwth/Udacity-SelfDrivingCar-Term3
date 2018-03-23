@@ -15,7 +15,7 @@ import glob
 NUMBER_OF_CLASSES = 2
 IMAGE_SHAPE = (160, 576)
 
-EPOCHS = 30 #1  # 2  # 20
+EPOCHS =  1 #30 #1  # 2  # 20
 BATCH_SIZE = 1
 
 LEARNING_RATE = 0.0001
@@ -290,7 +290,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             #print("feed= ", feed)
             #print(" feed type: ", type(feed))
 
-            print("--------before sess.run----------")
+            #print("--------before sess.run----------")
 
             # https://github.com/tensorflow/tensorflow/blob/r1.5/tensorflow/python/client/session.py
             # https://www.tensorflow.org/api_docs/python/tf/Session#run
@@ -301,7 +301,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             _, partial_loss = sess.run(
                 [train_op, cross_entropy_loss], feed_dict=feed)
 
-            print("---> iteration: ", i, " partial loss:", partial_loss)
+            print("---> epoch:", epoch, " ,iteration: ", i, " partial loss:", partial_loss)
 
             tf.summary.scalar('partial loss', partial_loss)
 
